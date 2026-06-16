@@ -572,16 +572,16 @@ function renderOcrPanel() {
   }
 
   const result = state.ocr.result;
-  const bestLot = getOcrBestLot(result);
+  const appliedPrice = getOcrApplyPrice(result);
   const selectedRune = state.ocr.selectedRuneId ? runeById.get(String(state.ocr.selectedRuneId)) : null;
   $("#ocrRuneSelect").value = selectedRune ? String(selectedRune.id) : "";
-  $("#ocrApplyBtn").disabled = state.ocr.loading || !result || !bestLot || !selectedRune;
+  $("#ocrApplyBtn").disabled = state.ocr.loading || !result || !appliedPrice || !selectedRune;
 
   if (!result) {
     $("#ocrDetectedName").textContent = "-";
     $("#ocrDetectedMeta").textContent = "Aucune capture traitee.";
     $("#ocrDetectedPrice").textContent = "-";
-    $("#ocrPriceMeta").textContent = "Meilleur lot visible.";
+    $("#ocrPriceMeta").textContent = "Moyenne pratique visible.";
     $("#ocrLots").textContent = "";
     return;
   }
@@ -589,10 +589,9 @@ function renderOcrPanel() {
   $("#ocrDetectedName").textContent = result.item_name || "Nom non lu";
   $("#ocrDetectedMeta").textContent = getOcrDetectedMeta(result, selectedRune);
 
-  if (bestLot) {
-    const appliedPrice = getOcrApplyPrice(bestLot);
+  if (appliedPrice) {
     $("#ocrDetectedPrice").textContent = `${formatMoney(appliedPrice)} k/u`;
-    $("#ocrPriceMeta").textContent = `Lot x${formatQuantity(bestLot.quantity)} a ${formatOcrUnitPrice(bestLot.unit_price)} k/u.`;
+    $("#ocrPriceMeta").textContent = getOcrPriceMeta(result);
   } else {
     $("#ocrDetectedPrice").textContent = "-";
     $("#ocrPriceMeta").textContent = "Aucun lot lisible.";
@@ -618,7 +617,7 @@ function renderOcrLots(result) {
   return lots
     .map((lot) => {
       const isBest = result.best_lot && Number(result.best_lot.quantity) === Number(lot.quantity);
-      const label = isBest ? " meilleur" : "";
+      const label = isBest ? " moins cher" : "";
       return `<span><strong>x${formatQuantity(lot.quantity)}</strong>${label}: ${formatMoney(lot.total_price)} k (${formatOcrUnitPrice(lot.unit_price)} k/u)</span>`;
     })
     .join(" · ");
@@ -628,10 +627,44 @@ function getOcrBestLot(result) {
   return result && result.best_lot ? result.best_lot : null;
 }
 
-function getOcrApplyPrice(lot) {
-  const unitPrice = Number(lot?.unit_price);
+function getOcrPracticalAverage(result) {
+  const unitPrice = Number(result?.practical_average_unit_price);
+  if (!Number.isFinite(unitPrice) || unitPrice <= 0) return null;
+  return unitPrice;
+}
+
+function getOcrWeightedAverage(result) {
+  const unitPrice = Number(result?.weighted_average_unit_price);
+  if (!Number.isFinite(unitPrice) || unitPrice <= 0) return null;
+  return unitPrice;
+}
+
+function getOcrApplyPrice(result) {
+  const unitPrice =
+    getOcrPracticalAverage(result) ??
+    getOcrWeightedAverage(result) ??
+    Number(getOcrBestLot(result)?.unit_price);
   if (!Number.isFinite(unitPrice) || unitPrice <= 0) return null;
   return Math.max(1, Math.round(unitPrice));
+}
+
+function getOcrPriceMeta(result) {
+  const practicalAverage = getOcrPracticalAverage(result);
+  if (practicalAverage) {
+    return `Moyenne pratique: ${formatOcrUnitPrice(practicalAverage)} k/u; x1 bas, gros lots trop chers ecartes.`;
+  }
+
+  const weightedAverage = getOcrWeightedAverage(result);
+  if (weightedAverage) {
+    return `Moyenne ponderee: ${formatOcrUnitPrice(weightedAverage)} k/u.`;
+  }
+
+  const bestLot = getOcrBestLot(result);
+  if (bestLot) {
+    return `Fallback lot x${formatQuantity(bestLot.quantity)} a ${formatOcrUnitPrice(bestLot.unit_price)} k/u.`;
+  }
+
+  return "Aucun lot lisible.";
 }
 
 function formatOcrUnitPrice(value) {
@@ -649,7 +682,7 @@ function applySelectedOcrPrice() {
 
 function applyOcrPrice(rune, result, automatic) {
   const bestLot = getOcrBestLot(result);
-  const price = getOcrApplyPrice(bestLot);
+  const price = getOcrApplyPrice(result);
   if (!price) {
     state.ocr.status = "Aucun prix OCR lisible dans cette capture.";
     renderOcrPanel();
@@ -705,7 +738,7 @@ async function processOcrImage(file) {
     state.ocr.selectedRuneId = matchedRune ? String(matchedRune.id) : "";
     state.ocr.status = matchedRune ? "OCR termine." : `Rune non reconnue: ${result.item_name || "nom absent"}.`;
 
-    if (matchedRune && getOcrBestLot(result)) {
+    if (matchedRune && getOcrApplyPrice(result)) {
       applyOcrPrice(matchedRune, result, true);
     }
   } catch (error) {

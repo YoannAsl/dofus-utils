@@ -4,7 +4,7 @@ import json
 import unittest
 from pathlib import Path
 
-from dofus_ocr.parser import parse_auction_ocr
+from dofus_ocr.parser import LotOffer, calculate_practical_average_unit_price, parse_auction_ocr
 
 
 class ParserTests(unittest.TestCase):
@@ -25,6 +25,7 @@ class ParserTests(unittest.TestCase):
         self.assertAlmostEqual(result.lots[3].unit_price, 6.19)
         self.assertEqual(result.best_lot.quantity, 1000)
         self.assertAlmostEqual(result.weighted_average_unit_price, 9609 / 1111)
+        self.assertAlmostEqual(result.practical_average_unit_price, 6.19)
         self.assertEqual(result.warnings, [])
 
     def test_rune_fo_popup_handles_ocr_zeroes_in_lot_quantities(self) -> None:
@@ -41,6 +42,8 @@ class ParserTests(unittest.TestCase):
         )
         self.assertEqual(result.best_lot.quantity, 1)
         self.assertAlmostEqual(result.best_lot.unit_price, 25)
+        self.assertAlmostEqual(result.weighted_average_unit_price, 35175 / 1111)
+        self.assertAlmostEqual(result.practical_average_unit_price, (25 * 0.1 + 27.6) / 1.1)
         self.assertEqual(result.warnings, [])
 
     def test_full_screenshot_anchors_to_visible_popup_table(self) -> None:
@@ -56,7 +59,25 @@ class ParserTests(unittest.TestCase):
         )
         self.assertEqual(result.best_lot.quantity, 1)
         self.assertAlmostEqual(result.best_lot.unit_price, 2018)
+        self.assertAlmostEqual(result.weighted_average_unit_price, 242386 / 111)
+        self.assertAlmostEqual(
+            result.practical_average_unit_price,
+            (2018 * 0.1 + 2140.3 + 2189.65 * 2) / 3.1,
+        )
         self.assertEqual(result.warnings, [])
+
+    def test_practical_average_does_not_let_expensive_1000_lot_dominate(self) -> None:
+        lots = [
+            LotOffer(quantity=1, total_price=1488, unit_price=1488),
+            LotOffer(quantity=10, total_price=14887, unit_price=1488.7),
+            LotOffer(quantity=100, total_price=145997, unit_price=1459.97),
+            LotOffer(quantity=1000, total_price=1613993, unit_price=1613.993),
+        ]
+
+        self.assertAlmostEqual(
+            calculate_practical_average_unit_price(lots),
+            (1488 * 0.1 + 1488.7 + 1459.97 * 2) / 3.1,
+        )
 
 
 if __name__ == "__main__":

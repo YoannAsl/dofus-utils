@@ -9,6 +9,13 @@ from typing import Any
 
 
 EXPECTED_DOFUS_LOTS = [1, 10, 100, 1000]
+PRACTICAL_AVERAGE_PRICE_TOLERANCE = 1.03
+PRACTICAL_LOT_WEIGHTS = {
+    1: 0.1,
+    10: 1.0,
+    100: 2.0,
+    1000: 2.0,
+}
 
 
 @dataclass(frozen=True)
@@ -54,6 +61,7 @@ class AuctionOcrResult:
     lots: list[LotOffer]
     best_lot: LotOffer | None
     weighted_average_unit_price: float | None
+    practical_average_unit_price: float | None
     simple_average_unit_price: float | None
     warnings: list[str] = field(default_factory=list)
     source_image: str | None = None
@@ -92,6 +100,7 @@ def parse_auction_ocr(payload: dict[str, Any], source_image: str | Path | None =
         if lots
         else None
     )
+    practical_average = calculate_practical_average_unit_price(lots)
     simple_average = mean(lot.unit_price for lot in lots) if lots else None
 
     return AuctionOcrResult(
@@ -100,6 +109,7 @@ def parse_auction_ocr(payload: dict[str, Any], source_image: str | Path | None =
         lots=lots,
         best_lot=best_lot,
         weighted_average_unit_price=weighted_average,
+        practical_average_unit_price=practical_average,
         simple_average_unit_price=simple_average,
         warnings=warnings,
         source_image=str(source_image) if source_image is not None else payload.get("imagePath"),
@@ -129,11 +139,33 @@ def result_to_dict(result: AuctionOcrResult) -> dict[str, Any]:
             else None
         ),
         "weighted_average_unit_price": result.weighted_average_unit_price,
+        "practical_average_unit_price": result.practical_average_unit_price,
         "simple_average_unit_price": result.simple_average_unit_price,
         "warnings": result.warnings,
         "source_image": result.source_image,
         "raw_text": result.raw_text,
     }
+
+
+def calculate_practical_average_unit_price(lots: list[LotOffer]) -> float | None:
+    if not lots:
+        return None
+
+    reference_lots = [lot for lot in lots if lot.quantity > 1] or lots
+    reference_price = min(lot.unit_price for lot in reference_lots)
+    max_included_price = reference_price * PRACTICAL_AVERAGE_PRICE_TOLERANCE
+    included_lots = [lot for lot in lots if lot.unit_price <= max_included_price]
+    if not included_lots:
+        included_lots = [min(lots, key=lambda lot: lot.unit_price)]
+
+    weighted_total = 0.0
+    total_weight = 0.0
+    for lot in included_lots:
+        weight = PRACTICAL_LOT_WEIGHTS.get(lot.quantity, 1.0)
+        weighted_total += lot.unit_price * weight
+        total_weight += weight
+
+    return weighted_total / total_weight if total_weight else None
 
 
 def _lines_from_payload(payload: dict[str, Any]) -> list[OcrLine]:

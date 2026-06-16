@@ -38,7 +38,7 @@ From the workspace root:
 .\start-runes-ocr.ps1
 ```
 
-Open the printed local URL, copy a Dofus HDV screenshot to the clipboard, then paste it into Atelier Runes. The page sends the image to the local OCR endpoint, matches the detected item name to a rune, and stores the best visible unit price in the existing local rune prices.
+Open the printed local URL, copy a Dofus HDV screenshot to the clipboard, then paste it into Atelier Runes. The page sends the image to the local OCR endpoint, matches the detected item name to a rune, and stores the practical visible average unit price in the existing local rune prices.
 
 If you are already in `runes-dofus`, this starts the same server:
 
@@ -51,6 +51,7 @@ If you are already in `runes-dofus`, this starts the same server:
 - `lots`: each visible auction row with `quantity`, `total_price`, and `unit_price`.
 - `best_lot`: the visible row with the cheapest unit price.
 - `weighted_average_unit_price`: `sum(total_price) / sum(quantity)` across visible rows.
+- `practical_average_unit_price`: unit-price average used by Atelier Runes. It anchors on the best non-x1 lot, ignores clearly worse visible lots, and gives x1 a tiny weight.
 - `simple_average_unit_price`: average of the visible row unit prices.
 - `displayed_average_price`: the top `Prix moyen` value when OCR can read it. Icons sometimes make this field noisy, so price calculations use the lot rows.
 

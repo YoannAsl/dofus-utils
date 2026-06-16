@@ -132,6 +132,12 @@ def print_summary(result) -> None:
             f"{format_money(result.weighted_average_unit_price)} kamas/item"
         )
 
+    if result.practical_average_unit_price is not None:
+        print(
+            "Practical visible average: "
+            f"{format_money(result.practical_average_unit_price)} kamas/item"
+        )
+
     if result.simple_average_unit_price is not None:
         print(
             "Simple lot average: "
@@ -176,4 +182,3 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
