@@ -1,0 +1,12 @@
+[project]
+name = "dofus-ocr"
+version = "0.1.0"
+description = "OCR helper for Dofus auction popups."
+requires-python = ">=3.10"
+dependencies = [
+  "Pillow>=10",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+

@@ -1,0 +1,27 @@
+{
+  "imagePath": "sample.png",
+  "text": "Bl\u00e9 Niv. 1 \u2022 C\u00e9r\u00e9ale Prix moyen ld Quantit\u00e9 en inventaire $ 527 Quantit\u00e9 en banque : Quantit\u00e9 en havre-Sac : O Lot 10 100 C 1000 prix 43 979 2397 6 190 ACHETER ACHETER ACHETER ACHETE",
+  "lines": [
+    {"text": "Bl\u00e9", "words": [{"text": "Bl\u00e9", "box": {"x": 94.0, "y": 56.0, "width": 25.0, "height": 12.0}}]},
+    {"text": "Niv. 1 \u2022 C\u00e9r\u00e9ale", "words": [{"text": "Niv.", "box": {"x": 94.0, "y": 75.0, "width": 25.0, "height": 12.0}}, {"text": "1", "box": {"x": 124.0, "y": 76.0, "width": 6.0, "height": 10.0}}, {"text": "\u2022", "box": {"x": 140.0, "y": 79.0, "width": 5.0, "height": 5.0}}, {"text": "C\u00e9r\u00e9ale", "box": {"x": 154.0, "y": 75.0, "width": 52.0, "height": 11.0}}]},
+    {"text": "Prix moyen ld", "words": [{"text": "Prix", "box": {"x": 94.0, "y": 99.0, "width": 25.0, "height": 11.0}}, {"text": "moyen", "box": {"x": 124.0, "y": 102.0, "width": 45.0, "height": 11.0}}, {"text": "ld", "box": {"x": 223.0, "y": 98.0, "width": 12.0, "height": 12.0}}]},
+    {"text": "Quantit\u00e9 en inventaire", "words": [{"text": "Quantit\u00e9", "box": {"x": 93.0, "y": 122.0, "width": 59.0, "height": 13.0}}, {"text": "en", "box": {"x": 157.0, "y": 125.0, "width": 15.0, "height": 8.0}}, {"text": "inventaire", "box": {"x": 178.0, "y": 122.0, "width": 67.0, "height": 11.0}}]},
+    {"text": "$ 527", "words": [{"text": "$", "box": {"x": 242.0, "y": 139.0, "width": 13.0, "height": 14.0}}, {"text": "527", "box": {"x": 261.0, "y": 141.0, "width": 23.0, "height": 10.0}}]},
+    {"text": "Quantit\u00e9 en banque :", "words": [{"text": "Quantit\u00e9", "box": {"x": 93.0, "y": 140.0, "width": 59.0, "height": 13.0}}, {"text": "en", "box": {"x": 157.0, "y": 143.0, "width": 15.0, "height": 8.0}}, {"text": "banque", "box": {"x": 178.0, "y": 140.0, "width": 50.0, "height": 14.0}}, {"text": ":", "box": {"x": 233.0, "y": 143.0, "width": 2.0, "height": 8.0}}]},
+    {"text": "Quantit\u00e9 en havre-Sac : O", "words": [{"text": "Quantit\u00e9", "box": {"x": 93.0, "y": 158.0, "width": 59.0, "height": 13.0}}, {"text": "en", "box": {"x": 157.0, "y": 161.0, "width": 15.0, "height": 8.0}}, {"text": "havre-Sac", "box": {"x": 178.0, "y": 158.0, "width": 68.0, "height": 11.0}}, {"text": ":", "box": {"x": 251.0, "y": 162.0, "width": 2.0, "height": 7.0}}, {"text": "O", "box": {"x": 279.0, "y": 159.0, "width": 8.0, "height": 10.0}}]},
+    {"text": "Lot", "words": [{"text": "Lot", "box": {"x": 70.0, "y": 211.0, "width": 21.0, "height": 11.0}}]},
+    {"text": "10", "words": [{"text": "10", "box": {"x": 89.0, "y": 288.0, "width": 14.0, "height": 10.0}}]},
+    {"text": "100", "words": [{"text": "100", "box": {"x": 85.0, "y": 329.0, "width": 23.0, "height": 10.0}}]},
+    {"text": "C 1000", "words": [{"text": "C", "box": {"x": 31.0, "y": 361.0, "width": 23.0, "height": 31.0}}, {"text": "1000", "box": {"x": 78.0, "y": 371.0, "width": 35.0, "height": 10.0}}]},
+    {"text": "prix", "words": [{"text": "prix", "box": {"x": 282.0, "y": 210.0, "width": 25.0, "height": 12.0}}]},
+    {"text": "43", "words": [{"text": "43", "box": {"x": 271.0, "y": 246.0, "width": 17.0, "height": 10.0}}]},
+    {"text": "979", "words": [{"text": "979", "box": {"x": 265.0, "y": 288.0, "width": 23.0, "height": 10.0}}]},
+    {"text": "2397", "words": [{"text": "2397", "box": {"x": 253.0, "y": 329.0, "width": 35.0, "height": 10.0}}]},
+    {"text": "6 190", "words": [{"text": "6", "box": {"x": 251.0, "y": 371.0, "width": 8.0, "height": 10.0}}, {"text": "190", "box": {"x": 264.0, "y": 371.0, "width": 24.0, "height": 10.0}}]},
+    {"text": "ACHETER", "words": [{"text": "ACHETER", "box": {"x": 329.0, "y": 247.0, "width": 69.0, "height": 9.0}}]},
+    {"text": "ACHETER", "words": [{"text": "ACHETER", "box": {"x": 329.0, "y": 288.0, "width": 69.0, "height": 9.0}}]},
+    {"text": "ACHETER", "words": [{"text": "ACHETER", "box": {"x": 329.0, "y": 329.0, "width": 69.0, "height": 10.0}}]},
+    {"text": "ACHETE", "words": [{"text": "ACHETE", "box": {"x": 329.0, "y": 371.0, "width": 59.0, "height": 9.0}}]}
+  ]
+}
+

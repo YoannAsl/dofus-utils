@@ -1,0 +1,484 @@
+{
+  "imagePath": "C:\\Users\\yoann\\AppData\\Local\\Temp\\codex-clipboard-d95ab801-aa06-4a75-b731-43a3b3b8bbc2.png",
+  "text": "Rune Fo Niv. 1 \u2022 Rune de forgemagie Prix moyen 35 ld Quantit\u00e9 en inventaire $ 368 Quantit\u00e9 en banque : Quantit\u00e9 en havre-Sac : O Lot 10 100 1 ooo prix 25 276 2 977 31 897 ACHETER ACHETER ACHETER ACHETER",
+  "lines": [
+    {
+      "text": "Rune Fo",
+      "words": [
+        {
+          "text": "Rune",
+          "box": {
+            "x": 99,
+            "y": 55,
+            "width": 38,
+            "height": 12
+          }
+        },
+        {
+          "text": "Fo",
+          "box": {
+            "x": 142,
+            "y": 55,
+            "width": 18,
+            "height": 12
+          }
+        }
+      ]
+    },
+    {
+      "text": "Niv. 1 \u2022 Rune de forgemagie",
+      "words": [
+        {
+          "text": "Niv.",
+          "box": {
+            "x": 99,
+            "y": 74,
+            "width": 25,
+            "height": 11
+          }
+        },
+        {
+          "text": "1",
+          "box": {
+            "x": 129,
+            "y": 75,
+            "width": 6,
+            "height": 10
+          }
+        },
+        {
+          "text": "\u2022",
+          "box": {
+            "x": 145,
+            "y": 78,
+            "width": 5,
+            "height": 5
+          }
+        },
+        {
+          "text": "Rune",
+          "box": {
+            "x": 160,
+            "y": 75,
+            "width": 33,
+            "height": 10
+          }
+        },
+        {
+          "text": "de",
+          "box": {
+            "x": 198,
+            "y": 74,
+            "width": 16,
+            "height": 11
+          }
+        },
+        {
+          "text": "forgemagie",
+          "box": {
+            "x": 219,
+            "y": 74,
+            "width": 79,
+            "height": 15
+          }
+        }
+      ]
+    },
+    {
+      "text": "Prix moyen 35 ld",
+      "words": [
+        {
+          "text": "Prix",
+          "box": {
+            "x": 99,
+            "y": 98,
+            "width": 25,
+            "height": 11
+          }
+        },
+        {
+          "text": "moyen",
+          "box": {
+            "x": 129,
+            "y": 101,
+            "width": 45,
+            "height": 11
+          }
+        },
+        {
+          "text": "35",
+          "box": {
+            "x": 186,
+            "y": 99,
+            "width": 16,
+            "height": 10
+          }
+        },
+        {
+          "text": "ld",
+          "box": {
+            "x": 236,
+            "y": 97,
+            "width": 12,
+            "height": 12
+          }
+        }
+      ]
+    },
+    {
+      "text": "Quantit\u00e9 en inventaire",
+      "words": [
+        {
+          "text": "Quantit\u00e9",
+          "box": {
+            "x": 98,
+            "y": 121,
+            "width": 59,
+            "height": 13
+          }
+        },
+        {
+          "text": "en",
+          "box": {
+            "x": 162,
+            "y": 124,
+            "width": 15,
+            "height": 8
+          }
+        },
+        {
+          "text": "inventaire",
+          "box": {
+            "x": 183,
+            "y": 121,
+            "width": 67,
+            "height": 11
+          }
+        }
+      ]
+    },
+    {
+      "text": "$ 368",
+      "words": [
+        {
+          "text": "$",
+          "box": {
+            "x": 247,
+            "y": 138,
+            "width": 13,
+            "height": 14
+          }
+        },
+        {
+          "text": "368",
+          "box": {
+            "x": 266,
+            "y": 140,
+            "width": 23,
+            "height": 10
+          }
+        }
+      ]
+    },
+    {
+      "text": "Quantit\u00e9 en banque :",
+      "words": [
+        {
+          "text": "Quantit\u00e9",
+          "box": {
+            "x": 98,
+            "y": 139,
+            "width": 59,
+            "height": 13
+          }
+        },
+        {
+          "text": "en",
+          "box": {
+            "x": 162,
+            "y": 142,
+            "width": 15,
+            "height": 8
+          }
+        },
+        {
+          "text": "banque",
+          "box": {
+            "x": 183,
+            "y": 139,
+            "width": 50,
+            "height": 14
+          }
+        },
+        {
+          "text": ":",
+          "box": {
+            "x": 238,
+            "y": 142,
+            "width": 2,
+            "height": 8
+          }
+        }
+      ]
+    },
+    {
+      "text": "Quantit\u00e9 en havre-Sac : O",
+      "words": [
+        {
+          "text": "Quantit\u00e9",
+          "box": {
+            "x": 98,
+            "y": 157,
+            "width": 59,
+            "height": 13
+          }
+        },
+        {
+          "text": "en",
+          "box": {
+            "x": 162,
+            "y": 160,
+            "width": 15,
+            "height": 8
+          }
+        },
+        {
+          "text": "havre-Sac",
+          "box": {
+            "x": 183,
+            "y": 157,
+            "width": 68,
+            "height": 11
+          }
+        },
+        {
+          "text": ":",
+          "box": {
+            "x": 256,
+            "y": 161,
+            "width": 2,
+            "height": 7
+          }
+        },
+        {
+          "text": "O",
+          "box": {
+            "x": 284,
+            "y": 158,
+            "width": 8,
+            "height": 10
+          }
+        }
+      ]
+    },
+    {
+      "text": "Lot",
+      "words": [
+        {
+          "text": "Lot",
+          "box": {
+            "x": 75,
+            "y": 210,
+            "width": 21,
+            "height": 11
+          }
+        }
+      ]
+    },
+    {
+      "text": "10",
+      "words": [
+        {
+          "text": "10",
+          "box": {
+            "x": 94,
+            "y": 287,
+            "width": 14,
+            "height": 10
+          }
+        }
+      ]
+    },
+    {
+      "text": "100",
+      "words": [
+        {
+          "text": "100",
+          "box": {
+            "x": 90,
+            "y": 328,
+            "width": 23,
+            "height": 10
+          }
+        }
+      ]
+    },
+    {
+      "text": "1 ooo",
+      "words": [
+        {
+          "text": "1",
+          "box": {
+            "x": 83,
+            "y": 370,
+            "width": 5,
+            "height": 10
+          }
+        },
+        {
+          "text": "ooo",
+          "box": {
+            "x": 93,
+            "y": 370,
+            "width": 25,
+            "height": 10
+          }
+        }
+      ]
+    },
+    {
+      "text": "prix",
+      "words": [
+        {
+          "text": "prix",
+          "box": {
+            "x": 287,
+            "y": 209,
+            "width": 25,
+            "height": 12
+          }
+        }
+      ]
+    },
+    {
+      "text": "25",
+      "words": [
+        {
+          "text": "25",
+          "box": {
+            "x": 278,
+            "y": 245,
+            "width": 15,
+            "height": 10
+          }
+        }
+      ]
+    },
+    {
+      "text": "276",
+      "words": [
+        {
+          "text": "276",
+          "box": {
+            "x": 270,
+            "y": 287,
+            "width": 23,
+            "height": 10
+          }
+        }
+      ]
+    },
+    {
+      "text": "2 977",
+      "words": [
+        {
+          "text": "2",
+          "box": {
+            "x": 258,
+            "y": 328,
+            "width": 8,
+            "height": 10
+          }
+        },
+        {
+          "text": "977",
+          "box": {
+            "x": 270,
+            "y": 328,
+            "width": 23,
+            "height": 10
+          }
+        }
+      ]
+    },
+    {
+      "text": "31 897",
+      "words": [
+        {
+          "text": "31",
+          "box": {
+            "x": 250,
+            "y": 370,
+            "width": 15,
+            "height": 10
+          }
+        },
+        {
+          "text": "897",
+          "box": {
+            "x": 270,
+            "y": 370,
+            "width": 23,
+            "height": 10
+          }
+        }
+      ]
+    },
+    {
+      "text": "ACHETER",
+      "words": [
+        {
+          "text": "ACHETER",
+          "box": {
+            "x": 334,
+            "y": 246,
+            "width": 69,
+            "height": 9
+          }
+        }
+      ]
+    },
+    {
+      "text": "ACHETER",
+      "words": [
+        {
+          "text": "ACHETER",
+          "box": {
+            "x": 334,
+            "y": 287,
+            "width": 69,
+            "height": 9
+          }
+        }
+      ]
+    },
+    {
+      "text": "ACHETER",
+      "words": [
+        {
+          "text": "ACHETER",
+          "box": {
+            "x": 334,
+            "y": 328,
+            "width": 69,
+            "height": 10
+          }
+        }
+      ]
+    },
+    {
+      "text": "ACHETER",
+      "words": [
+        {
+          "text": "ACHETER",
+          "box": {
+            "x": 334,
+            "y": 370,
+            "width": 69,
+            "height": 9
+          }
+        }
+      ]
+    }
+  ]
+}
