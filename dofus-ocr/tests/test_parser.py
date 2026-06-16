@@ -43,6 +43,21 @@ class ParserTests(unittest.TestCase):
         self.assertAlmostEqual(result.best_lot.unit_price, 25)
         self.assertEqual(result.warnings, [])
 
+    def test_full_screenshot_anchors_to_visible_popup_table(self) -> None:
+        fixture_path = Path(__file__).parent / "fixtures" / "full_screenshot_windows_ocr.json"
+        payload = json.loads(fixture_path.read_text(encoding="utf-8"))
+
+        result = parse_auction_ocr(payload)
+
+        self.assertEqual(result.item_name, "Rune Cri")
+        self.assertEqual(
+            [(lot.quantity, lot.total_price) for lot in result.lots],
+            [(1, 2018), (10, 21403), (100, 218965)],
+        )
+        self.assertEqual(result.best_lot.quantity, 1)
+        self.assertAlmostEqual(result.best_lot.unit_price, 2018)
+        self.assertEqual(result.warnings, [])
+
 
 if __name__ == "__main__":
     unittest.main()

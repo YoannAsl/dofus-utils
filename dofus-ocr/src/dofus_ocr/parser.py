@@ -65,17 +65,20 @@ def parse_auction_ocr(payload: dict[str, Any], source_image: str | Path | None =
     words = [word for line in lines for word in line.words]
     warnings: list[str] = []
 
-    item_name = _extract_item_name(lines)
-    displayed_average_price = _extract_displayed_average(lines)
-
     table = _find_table_headers(words)
     if table is None:
         warnings.append("auction table headers were not found")
+        auction_lines = lines
+        item_name = _extract_item_name(auction_lines)
+        displayed_average_price = _extract_displayed_average(auction_lines)
         lots: list[LotOffer] = []
     else:
         lot_header, price_header = table
-        price_rows = _extract_price_rows(lines, price_header)
-        quantity_rows = _extract_quantity_rows(lines, lot_header)
+        auction_lines = _auction_lines_for_table(lines, lot_header, price_header)
+        item_name = _extract_item_name(auction_lines)
+        displayed_average_price = _extract_displayed_average(auction_lines)
+        price_rows = _extract_price_rows(auction_lines, price_header)
+        quantity_rows = _extract_quantity_rows(auction_lines, lot_header)
         quantities = _resolve_quantities(quantity_rows, price_rows, warnings)
 
         lots = [
@@ -265,10 +268,42 @@ def _find_table_headers(words: list[OcrWord]) -> tuple[OcrWord, OcrWord] | None:
     return best_pair
 
 
+def _auction_lines_for_table(
+    lines: list[OcrLine],
+    lot_header: OcrWord,
+    price_header: OcrWord,
+) -> list[OcrLine]:
+    action_rows = _extract_action_rows(lines, price_header)
+    bottom = (
+        max(line.box.y + line.box.height for _, line in action_rows) + 24
+        if action_rows
+        else lot_header.box.y + 240
+    )
+    right = (
+        max(line.box.x + line.box.width for _, line in action_rows) + 24
+        if action_rows
+        else price_header.box.x + 180
+    )
+    left = lot_header.box.x - 260
+    top = lot_header.box.y - 180
+
+    return [
+        line
+        for line in lines
+        if line.box.y + line.box.height >= top
+        and line.box.y <= bottom
+        and line.box.x + line.box.width >= left
+        and line.box.x <= right
+    ]
+
+
 def _extract_price_rows(lines: list[OcrLine], price_header: OcrWord) -> list[tuple[float, int]]:
     min_y = price_header.box.y + 15
     min_x = price_header.box.x - 80
     max_x = price_header.box.x + 60
+    action_rows = _extract_action_rows(lines, price_header)
+    action_row_y_values = [y for y, _ in action_rows]
+    action_tolerance = _action_row_tolerance(action_row_y_values)
     rows: list[tuple[float, int]] = []
 
     for line in lines:
@@ -276,7 +311,12 @@ def _extract_price_rows(lines: list[OcrLine], price_header: OcrWord) -> list[tup
             continue
         if line.box.center_x < min_x or line.box.center_x > max_x:
             continue
-        if any(_normalize_text(word.text).startswith("acheter") for word in line.words):
+        if action_row_y_values and not any(
+            abs(line.box.center_y - action_y) <= action_tolerance
+            for action_y in action_row_y_values
+        ):
+            continue
+        if any(_is_buy_word(word.text) for word in line.words):
             continue
 
         value = _parse_number(line.text)
@@ -285,6 +325,46 @@ def _extract_price_rows(lines: list[OcrLine], price_header: OcrWord) -> list[tup
         rows.append((line.box.center_y, value))
 
     return _dedupe_rows(rows)
+
+
+def _extract_action_rows(lines: list[OcrLine], price_header: OcrWord) -> list[tuple[float, OcrLine]]:
+    min_y = price_header.box.y + 15
+    min_x = price_header.box.center_x + 20
+    max_x = price_header.box.center_x + 240
+    rows: list[tuple[float, OcrLine]] = []
+
+    for line in lines:
+        if line.box.y <= min_y:
+            continue
+        if line.box.center_x < min_x or line.box.center_x > max_x:
+            continue
+        if not any(_is_buy_word(word.text) for word in line.words):
+            continue
+        rows.append((line.box.center_y, line))
+
+    return _dedupe_action_rows(rows)
+
+
+def _is_buy_word(text: str) -> bool:
+    return _normalize_text(text).startswith("achete")
+
+
+def _dedupe_action_rows(rows: list[tuple[float, OcrLine]]) -> list[tuple[float, OcrLine]]:
+    sorted_rows = sorted(rows, key=lambda row: row[0])
+    deduped: list[tuple[float, OcrLine]] = []
+    for y, line in sorted_rows:
+        if deduped and abs(deduped[-1][0] - y) < 8:
+            continue
+        deduped.append((y, line))
+    return deduped
+
+
+def _action_row_tolerance(row_y_values: list[float]) -> float:
+    sorted_y = sorted(row_y_values)
+    gaps = [next_y - y for y, next_y in zip(sorted_y, sorted_y[1:]) if next_y > y]
+    if not gaps:
+        return 16
+    return max(16, min(gaps) * 0.45)
 
 
 def _extract_quantity_rows(lines: list[OcrLine], lot_header: OcrWord) -> list[tuple[float, int]]:
