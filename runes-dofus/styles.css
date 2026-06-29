@@ -311,7 +311,8 @@ h1 {
 .field input:focus,
 .field select:focus,
 .price-input:focus,
-.item-price-input:focus {
+.item-price-input:focus,
+.eklame-price-input:focus {
   border-color: var(--blue);
   box-shadow: 0 0 0 3px rgba(34, 93, 183, 0.14);
 }
@@ -464,6 +465,7 @@ h1 {
   background: #9d9488;
 }
 
+.eklame-tool,
 .item-finder {
   margin: 18px 0;
 }
@@ -501,6 +503,10 @@ h1 {
   border-radius: 8px;
   background: var(--surface);
   box-shadow: var(--shadow);
+}
+
+.eklame-controls {
+  grid-template-columns: minmax(220px, 340px);
 }
 
 .field.compact input {
@@ -547,6 +553,10 @@ h1 {
 
 .item-table {
   min-width: 1080px;
+}
+
+.eklame-table {
+  min-width: 1040px;
 }
 
 .item-cell {
@@ -656,7 +666,8 @@ tbody tr.is-ocr-updated {
 }
 
 .price-input,
-.item-price-input {
+.item-price-input,
+.eklame-price-input {
   width: 116px;
   height: 36px;
   border: 1px solid var(--line-strong);

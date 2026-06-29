@@ -1,5 +1,6 @@
 const STORAGE_KEY = "dofus-rune-prices-v1";
 const ITEM_PRICE_STORAGE_KEY = "dofus-fm-item-prices-v1";
+const EKLAME_PRICE_STORAGE_KEY = "dofus-eklame-prices-v1";
 const OCR_API_PATH = "/api/ocr";
 const OCR_HEALTH_PATH = "/api/health";
 
@@ -61,6 +62,8 @@ const EFFECTS = {
 const state = {
   prices: loadPrices(),
   itemPrices: loadItemPrices(),
+  eklamePrices: loadEklamePrices(),
+  eklameTargetId: "31520",
   search: "",
   family: "all",
   decision: "all",
@@ -98,6 +101,13 @@ const DOFUSDB_API_BASE = "https://api.dofusdb.fr";
 const ITEM_PAGE_SIZE = 50;
 const ITEM_RESULT_LIMIT = 40;
 const ITEM_SELECT_FIELDS = ["id", "name", "level", "typeId", "type", "effects", "img", "iconId"];
+const EKLAMES = [
+  { id: "31518", name: "Eklame inferieure", levelRange: "1 a 50", factor: 1, iconId: 74084 },
+  { id: "31519", name: "Eklame ordinaire", levelRange: "51 a 100", factor: 2, iconId: 74072 },
+  { id: "31520", name: "Eklame superieure", levelRange: "101 a 150", factor: 4, iconId: 74061 },
+  { id: "31521", name: "Eklame majestueuse", levelRange: "151 a 190", factor: 8, iconId: 74066 },
+  { id: "31522", name: "Eklame supreme", levelRange: "191 a 200", factor: 16, iconId: 74071 },
+];
 const FM_JOB_GROUPS = [
   { id: "all", label: "Tous métiers FM", typeIds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 16, 17, 19, 82] },
   { id: "jeweller", label: "Joaillomage", typeIds: [1, 9] },
@@ -172,6 +182,10 @@ function loadItemPrices() {
   return loadStoredMap(ITEM_PRICE_STORAGE_KEY);
 }
 
+function loadEklamePrices() {
+  return loadStoredMap(EKLAME_PRICE_STORAGE_KEY);
+}
+
 function loadStoredMap(key) {
   try {
     const raw = localStorage.getItem(key);
@@ -190,8 +204,18 @@ function saveItemPrices() {
   localStorage.setItem(ITEM_PRICE_STORAGE_KEY, JSON.stringify(state.itemPrices));
 }
 
+function saveEklamePrices() {
+  localStorage.setItem(EKLAME_PRICE_STORAGE_KEY, JSON.stringify(state.eklamePrices));
+  $("#eklameSaveStatus").textContent = "Sauvegarde locale a " + new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+}
+
 function priceOf(rune) {
   const price = Number(state.prices[rune.id]);
+  return Number.isFinite(price) && price > 0 ? price : null;
+}
+
+function eklamePriceOf(eklame) {
+  const price = Number(state.eklamePrices[eklame.id]);
   return Number.isFinite(price) && price > 0 ? price : null;
 }
 
@@ -539,6 +563,7 @@ function render() {
   const activePosition = active && typeof active.selectionStart === "number" ? active.selectionStart : null;
   const { rows, filtered, bestXp } = getRows();
   renderSummary(rows, bestXp);
+  renderEklameTool();
   renderOcrPanel();
   renderTable(filtered, bestXp);
   renderItemFinder();
@@ -555,6 +580,7 @@ function getActiveInputSelector(active) {
   if (!active) return null;
   if (active.matches(".price-input")) return `.price-input[data-id="${active.dataset.id}"]`;
   if (active.matches(".item-price-input")) return `.item-price-input[data-id="${active.dataset.id}"]`;
+  if (active.matches(".eklame-price-input")) return `.eklame-price-input[data-id="${active.dataset.id}"]`;
   return null;
 }
 
@@ -822,6 +848,131 @@ function normalizeRuneNameForMatch(value) {
     .replace(/\brunes?\b/g, " ")
     .trim()
     .replace(/\s+/g, " ");
+}
+
+function getSelectedEklameTarget() {
+  return EKLAMES.find((eklame) => eklame.id === state.eklameTargetId) || EKLAMES[2];
+}
+
+function getEklameRows(target = getSelectedEklameTarget()) {
+  const targetIndex = EKLAMES.findIndex((eklame) => eklame.id === target.id);
+
+  return EKLAMES.map((eklame, index) => {
+    const directPrice = eklamePriceOf(eklame);
+    const canOpenToTarget = index >= targetIndex;
+    const targetQuantity = canOpenToTarget ? eklame.factor / target.factor : null;
+    const costPerTarget = directPrice && targetQuantity ? directPrice / targetQuantity : null;
+    const action = !canOpenToTarget ? "Trop bas" : index === targetIndex ? "Acheter" : "Ouvrir";
+    const decision = !canOpenToTarget ? "neutral" : costPerTarget ? (index === targetIndex ? "buy" : "craft") : "missing";
+
+    return {
+      eklame,
+      directPrice,
+      canOpenToTarget,
+      targetQuantity,
+      costPerTarget,
+      action,
+      decision,
+    };
+  });
+}
+
+function renderEklameTool() {
+  const target = getSelectedEklameTarget();
+  const rows = getEklameRows(target);
+  const pricedRows = rows.filter((row) => row.directPrice);
+  const options = rows
+    .filter((row) => row.costPerTarget)
+    .sort((a, b) => a.costPerTarget - b.costPerTarget);
+  const bestOption = options[0] || null;
+  const directRow = rows.find((row) => row.eklame.id === target.id);
+  const directCost = directRow?.costPerTarget || null;
+  const bestSaving = bestOption && directCost ? directCost - bestOption.costPerTarget : null;
+
+  $("#eklameTargetSelect").value = target.id;
+  $("#eklamePricedCount").textContent = `${pricedRows.length} / ${EKLAMES.length}`;
+
+  if (bestOption) {
+    $("#eklameBestOpenName").textContent = bestOption.eklame.name;
+    $("#eklameBestOpenMeta").textContent = `${formatMoney(bestOption.costPerTarget)} k par ${target.name}.`;
+  } else {
+    $("#eklameBestOpenName").textContent = "Prix requis";
+    $("#eklameBestOpenMeta").textContent = `Renseigne ${target.name} ou un tier superieur.`;
+  }
+
+  if (bestOption && bestOption.eklame.id !== target.id && bestSaving > 0) {
+    $("#eklameBestBaseName").textContent = `${formatMoney(bestSaving)} k`;
+    $("#eklameBestBaseMeta").textContent = `Economises par ${target.name} vs achat direct.`;
+  } else if (directCost) {
+    $("#eklameBestBaseName").textContent = "Achat direct";
+    $("#eklameBestBaseMeta").textContent = `Le prix direct est le meilleur connu pour ${target.name}.`;
+  } else {
+    $("#eklameBestBaseName").textContent = "Direct inconnu";
+    $("#eklameBestBaseMeta").textContent = `Renseigne ${target.name} pour comparer l'economie.`;
+  }
+
+  $("#eklameTable").innerHTML = rows
+    .map((row) => {
+      const { eklame } = row;
+      const isBest = bestOption && bestOption.eklame.id === eklame.id;
+      return `
+        <tr class="${isBest ? "is-top-xp" : ""}">
+          <td>
+            <div class="rune-cell item-cell">
+              <img class="item-icon" src="${escapeAttr(getEklameImage(eklame))}" alt="" loading="lazy">
+              <span>
+                <span class="rune-name">${escapeHtml(eklame.name)}</span>
+                <span class="rune-meta">Monstres niv. ${escapeHtml(eklame.levelRange)} - x${formatQuantity(eklame.factor)} base</span>
+              </span>
+            </div>
+          </td>
+          <td>
+            <input
+              class="eklame-price-input"
+              inputmode="numeric"
+              data-id="${eklame.id}"
+              aria-label="Prix HDV ${escapeAttr(eklame.name)}"
+              value="${escapeAttr(state.eklamePrices[eklame.id] || "")}"
+              placeholder="0"
+            >
+          </td>
+          <td class="num">${row.targetQuantity ? formatQuantity(row.targetQuantity) : "-"}</td>
+          <td class="num">${row.costPerTarget ? `${formatMoney(row.costPerTarget)} k` : "-"}</td>
+          <td><span class="badge ${badgeClass(row.decision)}">${escapeHtml(row.action)}</span></td>
+          <td class="num">${formatEklameDelta(row, directCost)}</td>
+          <td class="detail">${escapeHtml(getEklameDetail(row, target, directCost, isBest))}</td>
+        </tr>
+      `;
+    })
+    .join("");
+}
+
+function getEklameDetail(row, target, directCost, isBest) {
+  if (!row.canOpenToTarget) {
+    return `${row.eklame.name} est plus bas que ${target.name}.`;
+  }
+  if (!row.directPrice) {
+    return `Renseigne le prix HDV de ${row.eklame.name}.`;
+  }
+  if (row.eklame.id === target.id) {
+    return isBest ? "Acheter directement est le meilleur choix connu." : "Prix direct de reference.";
+  }
+  const opens = Math.log2(row.targetQuantity);
+  const openText = opens === 1 ? "1 double-clic" : `${opens} double-clics`;
+  if (isBest) {
+    return `Acheter puis ouvrir: ${openText} pour obtenir ${formatQuantity(row.targetQuantity)} ${target.name}.`;
+  }
+  if (directCost) return `Donne ${formatQuantity(row.targetQuantity)} ${target.name}, mais revient plus cher que le meilleur choix connu.`;
+  return `Donne ${formatQuantity(row.targetQuantity)} ${target.name} apres ${openText}.`;
+}
+
+function formatEklameDelta(row, directCost) {
+  if (!row.costPerTarget || !directCost || row.costPerTarget === directCost) return "-";
+  return formatGain(directCost - row.costPerTarget);
+}
+
+function getEklameImage(eklame) {
+  return `${DOFUSDB_API_BASE}/img/items/${eklame.iconId}.png`;
 }
 
 function renderItemFinder() {
@@ -1232,6 +1383,7 @@ function exportPrices() {
     source: "Atelier Runes",
     prices: state.prices,
     itemPrices: state.itemPrices,
+    eklamePrices: state.eklamePrices,
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
@@ -1249,8 +1401,10 @@ function importPrices(file) {
       const payload = JSON.parse(String(reader.result));
       state.prices = parsePriceMap(payload.prices || payload);
       state.itemPrices = parsePriceMap(payload.itemPrices || {});
+      state.eklamePrices = parsePriceMap(payload.eklamePrices || {});
       savePrices();
       saveItemPrices();
+      saveEklamePrices();
       render();
     } catch {
       alert("Import impossible: le fichier JSON n'est pas valide.");
@@ -1416,6 +1570,22 @@ function bindEvents() {
     saveItemPrices();
     render();
   });
+  $("#eklameTargetSelect").addEventListener("change", (event) => {
+    state.eklameTargetId = event.target.value;
+    renderEklameTool();
+  });
+  $("#eklameTable").addEventListener("input", (event) => {
+    if (!event.target.matches(".eklame-price-input")) return;
+    const id = event.target.dataset.id;
+    const parsed = parsePrice(event.target.value);
+    if (parsed) {
+      state.eklamePrices[id] = parsed;
+    } else {
+      delete state.eklamePrices[id];
+    }
+    saveEklamePrices();
+    render();
+  });
   $("#exportBtn").addEventListener("click", exportPrices);
   $("#importBtn").addEventListener("click", () => $("#importFile").click());
   $("#importFile").addEventListener("change", (event) => {
@@ -1426,7 +1596,9 @@ function bindEvents() {
   $("#resetBtn").addEventListener("click", () => {
     if (!confirm("Effacer tous les prix saisis ?")) return;
     state.prices = {};
+    state.eklamePrices = {};
     savePrices();
+    saveEklamePrices();
     render();
   });
 }

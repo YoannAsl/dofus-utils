@@ -2,6 +2,8 @@
 
 Static Dofus rune pricing tool with an optional local OCR bridge.
 
+The app also includes an Eklame price comparator based on DofusDB item type 310. Pick the tier you want, enter HDV prices for the five tiers, and it compares buying that tier directly against buying higher tiers and opening them.
+
 ## Run with OCR
 
 From this folder:
