@@ -147,6 +147,67 @@
         <span><i class="dot missing"></i> Prix insuffisants</span>
       </section>
 
+      <section class="eklame-tool" aria-label="Comparateur prix Eklames">
+        <div class="finder-header">
+          <div>
+            <span class="panel-label">Eklames</span>
+            <h2>Quel tier acheter</h2>
+          </div>
+          <span id="eklameSaveStatus" class="finder-status">
+            Prix manuels, tiers issus de
+            <a href="https://dofusdb.fr/fr/database/items?types=310&sortBy=-id" target="_blank" rel="noreferrer">DofusDB</a>.
+          </span>
+        </div>
+
+        <div class="finder-controls eklame-controls">
+          <label class="field">
+            <span>Tier voulu</span>
+            <select id="eklameTargetSelect">
+              <option value="31518">Eklame inferieure</option>
+              <option value="31519">Eklame ordinaire</option>
+              <option value="31520">Eklame superieure</option>
+              <option value="31521">Eklame majestueuse</option>
+              <option value="31522">Eklame supreme</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="finder-metrics eklame-metrics" aria-label="Synthese Eklames">
+          <article>
+            <span class="panel-label">Prix renseignes</span>
+            <strong id="eklamePricedCount">0 / 5</strong>
+            <span>Sauvegarde locale active.</span>
+          </article>
+          <article>
+            <span class="panel-label">Meilleur achat</span>
+            <strong id="eklameBestOpenName">Prix requis</strong>
+            <span id="eklameBestOpenMeta">Renseigne le tier voulu ou un tier superieur.</span>
+          </article>
+          <article>
+            <span class="panel-label">Economie vs direct</span>
+            <strong id="eklameBestBaseName">Direct inconnu</strong>
+            <span id="eklameBestBaseMeta">Renseigne le tier voulu pour comparer.</span>
+          </article>
+        </div>
+
+        <div class="item-table-wrap" aria-label="Tableau comparateur Eklames">
+          <table class="eklame-table">
+            <thead>
+              <tr>
+                <th>Eklame</th>
+                <th>Prix HDV</th>
+                <th>Recu</th>
+                <th>Cout / tier voulu</th>
+                <th>Decision</th>
+                <th>Vs direct</th>
+                <th>Detail</th>
+              </tr>
+            </thead>
+            <tbody id="eklameTable"></tbody>
+          </table>
+        </div>
+      </section>
+
       <section class="item-finder" aria-label="Items pour XP FM">
         <div class="finder-header">
           <div>
@@ -261,7 +322,7 @@
 
       <footer class="footer">
         <p>
-          Les prix sont stockés dans le navigateur via localStorage. Les calculs ignorent les taxes HDV, supposent toujours 3 runes inférieures pour 1 rune supérieure, et le finder d'items interroge DofusDB en direct.
+          Les prix sont stockes dans le navigateur via localStorage. Les calculs ignorent les taxes HDV, supposent toujours 3 runes inferieures pour 1 rune superieure, comparent les Eklames par double-clic 1:2, et le finder d'items interroge DofusDB en direct.
         </p>
       </footer>
     </main>
