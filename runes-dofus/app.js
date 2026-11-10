@@ -3,6 +3,8 @@ const ITEM_PRICE_STORAGE_KEY = "dofus-fm-item-prices-v1";
 const EKLAME_PRICE_STORAGE_KEY = "dofus-eklame-prices-v1";
 const OCR_API_PATH = "/api/ocr";
 const OCR_HEALTH_PATH = "/api/health";
+const OCR_CAPTURES_PATH = "/api/captures";
+const OCR_CAPTURE_CURSOR_KEY = "dofus-ocr-capture-cursor";
 
 const EFFECTS = {
   111: { label: "PA", unit: "PA", weight: 100, family: "Exo" },
@@ -82,13 +84,13 @@ const state = {
   },
   ocr: {
     loading: false,
-    status: "Colle ou depose une capture HDV.",
+    status: "Colle une capture ou choisis un fichier.",
     result: null,
     previewUrl: null,
-    selectedRuneId: "",
+    targetId: "",
+    items: [],
     updatedRuneId: null,
-    appliedPrice: null,
-    appliedLot: null,
+    pending: false,
   },
 };
 
@@ -128,6 +130,7 @@ const itemTypeCache = new Map();
 let itemSearchToken = 0;
 let activeRuneResultIndex = -1;
 let ocrRequestToken = 0;
+let deferredCaptureId = null;
 
 state.itemFinder.runeId = getDefaultItemRuneId();
 
@@ -370,12 +373,17 @@ function renderItemFinderControls() {
 }
 
 function renderOcrControls() {
-  $("#ocrRuneSelect").innerHTML = [
-    `<option value="">Choisir une rune...</option>`,
-    ...[...runes]
-      .sort((a, b) => a.name.localeCompare(b.name, "fr"))
-      .map((rune) => `<option value="${rune.id}">${escapeHtml(rune.name)}</option>`),
-  ].join("");
+  const itemOptions = state.ocr.items
+    .filter((item) => !runeById.has(String(item.id)))
+    .map((item) => `<option value="${Number(item.id)}">${escapeHtml(marketItemName(item))} · n°${Number(item.id)}</option>`)
+    .join("");
+  const runeOptions = [...runes]
+    .sort((a, b) => a.name.localeCompare(b.name, "fr"))
+    .map((rune) => `<option value="${rune.id}">${escapeHtml(rune.name)}</option>`)
+    .join("");
+  $("#ocrTargetSelect").innerHTML = `<option value="">Choisir un objet…</option>
+    ${itemOptions ? `<optgroup label="Catalogue">${itemOptions}</optgroup>` : ""}
+    <optgroup label="Runes">${runeOptions}</optgroup>`;
 }
 
 function getSelectedItemRune() {
@@ -517,7 +525,6 @@ function renderTable(filtered, bestXp) {
       const targetCost = getTargetDensityCost(rune, acquisition);
       const isTopXp = bestXp && bestXp.rune.id === rune.id;
       const rowClasses = [
-        acquisition.decision === "craft" && acquisition.profit > 0 ? "is-craft" : "",
         isTopXp ? "is-top-xp" : "",
         String(state.ocr.updatedRuneId) === String(rune.id) ? "is-ocr-updated" : "",
       ].filter(Boolean).join(" ");
@@ -532,7 +539,6 @@ function renderTable(filtered, bestXp) {
               </span>
             </div>
           </td>
-          <td class="num">${formatDensity(rune.density)}</td>
           <td>
             <input
               class="price-input"
@@ -540,9 +546,10 @@ function renderTable(filtered, bestXp) {
               data-id="${rune.id}"
               aria-label="Prix HDV ${escapeAttr(rune.name)}"
               value="${escapeAttr(state.prices[rune.id] || "")}"
-              placeholder="0"
+              placeholder="—"
             >
           </td>
+          <td class="num">${formatDensity(rune.density)}</td>
           <td class="num">${acquisition.best ? `${formatMoney(acquisition.best.cost)} k` : "-"}</td>
           <td><span class="badge ${badgeClass(acquisition.decision)}">${escapeHtml(acquisition.badge)}</span></td>
           <td class="num">${formatGain(acquisition.saving)}</td>
@@ -567,6 +574,7 @@ function render() {
   renderOcrPanel();
   renderTable(filtered, bestXp);
   renderItemFinder();
+  renderMarketPrices();
   if (activeSelector) {
     const next = document.querySelector(activeSelector);
     if (next) {
@@ -585,7 +593,8 @@ function getActiveInputSelector(active) {
 }
 
 function renderOcrPanel() {
-  $("#ocrStatus").textContent = state.ocr.status;
+  const status = $("#ocrStatus");
+  if (status.textContent !== state.ocr.status) status.textContent = state.ocr.status;
 
   const previewWrap = $("#ocrPreviewWrap");
   const preview = $("#ocrPreview");
@@ -598,14 +607,19 @@ function renderOcrPanel() {
   }
 
   const result = state.ocr.result;
-  const appliedPrice = getOcrApplyPrice(result);
-  const selectedRune = state.ocr.selectedRuneId ? runeById.get(String(state.ocr.selectedRuneId)) : null;
-  $("#ocrRuneSelect").value = selectedRune ? String(selectedRune.id) : "";
-  $("#ocrApplyBtn").disabled = state.ocr.loading || !result || !appliedPrice || !selectedRune;
+  $(".ocr-result").hidden = !result;
+  $("#ocrDismissBtn").hidden = !state.ocr.pending || state.ocr.loading;
+  const selected = getOcrTarget();
+  const isRune = runeById.has(state.ocr.targetId);
+  const detectedPrice = isRune ? getOcrApplyPrice(result) : getOcrMarketPrice(result);
+  const price = isRune ? detectedPrice : parseMarketPrice($("#ocrPriceInput").value);
+  $("#ocrTargetSelect").value = state.ocr.targetId;
+  $("#ocrPriceField").hidden = isRune;
+  $("#ocrApplyBtn").disabled = state.ocr.loading || !result || !price || !selected;
 
   if (!result) {
     $("#ocrDetectedName").textContent = "-";
-    $("#ocrDetectedMeta").textContent = "Aucune capture traitee.";
+    $("#ocrDetectedMeta").textContent = "Aucune capture traitée.";
     $("#ocrDetectedPrice").textContent = "-";
     $("#ocrPriceMeta").textContent = "Moyenne pratique visible.";
     $("#ocrLots").textContent = "";
@@ -613,27 +627,30 @@ function renderOcrPanel() {
   }
 
   $("#ocrDetectedName").textContent = result.item_name || "Nom non lu";
-  $("#ocrDetectedMeta").textContent = getOcrDetectedMeta(result, selectedRune);
+  $("#ocrDetectedMeta").textContent = getOcrDetectedMeta(result, selected);
 
-  if (appliedPrice) {
-    $("#ocrDetectedPrice").textContent = `${formatMoney(appliedPrice)} k/u`;
-    $("#ocrPriceMeta").textContent = getOcrPriceMeta(result);
+  if (detectedPrice) {
+    $("#ocrDetectedPrice").textContent = `${formatMarketPrice(detectedPrice)} k/u`;
+    $("#ocrPriceMeta").textContent = !isRune && !getOcrUnitPrice(result)
+      ? "Prix moyen affiché par le jeu."
+      : getOcrPriceMeta(result);
   } else {
     $("#ocrDetectedPrice").textContent = "-";
-    $("#ocrPriceMeta").textContent = "Aucun lot lisible.";
+    $("#ocrPriceMeta").textContent = isRune ? "Aucun lot lisible." : "Saisis le prix visible sur la capture.";
   }
 
   $("#ocrLots").innerHTML = renderOcrLots(result);
 }
 
-function getOcrDetectedMeta(result, selectedRune) {
-  if (Array.isArray(result.warnings) && result.warnings.length) {
-    return `A verifier: ${result.warnings[0]}`;
-  }
-  if (selectedRune) {
-    return `Associe a ${selectedRune.name}.`;
-  }
-  return "Choisis la rune cible.";
+function getOcrTarget() {
+  return runeById.get(state.ocr.targetId)
+    || state.ocr.items.find((item) => String(item.id) === state.ocr.targetId);
+}
+
+function getOcrDetectedMeta(result, selected) {
+  if (result.warnings?.length) return "Vérifie les lots et le prix avant de l’appliquer.";
+  if (selected) return `Objet cible · ${marketItemName(selected)}.`;
+  return "Ouvre l’objet dans Prix & crafts, puis choisis Associer à la capture.";
 }
 
 function renderOcrLots(result) {
@@ -665,13 +682,23 @@ function getOcrWeightedAverage(result) {
   return unitPrice;
 }
 
-function getOcrApplyPrice(result) {
+function getOcrUnitPrice(result) {
   const unitPrice =
     getOcrPracticalAverage(result) ??
     getOcrWeightedAverage(result) ??
     Number(getOcrBestLot(result)?.unit_price);
-  if (!Number.isFinite(unitPrice) || unitPrice <= 0) return null;
-  return Math.max(1, Math.round(unitPrice));
+  return Number.isFinite(unitPrice) && unitPrice > 0 ? unitPrice : null;
+}
+
+function getOcrApplyPrice(result) {
+  const unitPrice = getOcrUnitPrice(result);
+  return unitPrice === null ? null : Math.max(1, Math.round(unitPrice));
+}
+
+function getOcrMarketPrice(result) {
+  const unitPrice = getOcrUnitPrice(result);
+  if (unitPrice !== null) return Math.round(unitPrice * 1000) / 1000;
+  return parseMarketPrice(result?.displayed_average_price);
 }
 
 function getOcrPriceMeta(result) {
@@ -701,27 +728,31 @@ function formatOcrUnitPrice(value) {
 }
 
 function applySelectedOcrPrice() {
-  const rune = runeById.get(String($("#ocrRuneSelect").value));
-  if (!rune || !state.ocr.result) return;
-  applyOcrPrice(rune, state.ocr.result, false);
+  const target = getOcrTarget();
+  if (state.ocr.loading || !target || !state.ocr.result) return;
+  const price = runeById.has(state.ocr.targetId)
+    ? getOcrApplyPrice(state.ocr.result)
+    : parseMarketPrice($("#ocrPriceInput").value);
+  if (price) applyOcrPrice(target, price);
 }
 
-function applyOcrPrice(rune, result, automatic) {
-  const bestLot = getOcrBestLot(result);
-  const price = getOcrApplyPrice(result);
-  if (!price) {
-    state.ocr.status = "Aucun prix OCR lisible dans cette capture.";
-    renderOcrPanel();
-    return;
-  }
+function selectMarketOcrTarget(item) {
+  if (!state.ocr.result || state.ocr.loading) return;
+  state.ocr.items = [item, ...state.ocr.items.filter((entry) => entry.id !== item.id)];
+  state.ocr.targetId = String(item.id);
+  renderOcrControls();
+  renderOcrPanel();
+  $("#ocrPanel").open = true;
+  $("#ocrTargetSelect").focus();
+}
 
-  state.prices[rune.id] = price;
-  state.ocr.selectedRuneId = String(rune.id);
-  state.ocr.updatedRuneId = String(rune.id);
-  state.ocr.appliedPrice = price;
-  state.ocr.appliedLot = bestLot;
-  state.ocr.status = `${automatic ? "Prix OCR applique" : "Prix applique"}: ${rune.name} = ${formatMoney(price)} k/u.`;
-  savePrices();
+function applyOcrPrice(item, price) {
+  const id = String(item.id);
+  saveMarketPrice(id, price);
+  state.ocr.pending = false;
+  acknowledgeOcrCapture();
+  if (runeById.has(id)) state.ocr.updatedRuneId = id;
+  state.ocr.status = `${marketItemName(item)} · ${formatMarketPrice(price)} k/u enregistré`;
   render();
 }
 
@@ -732,17 +763,22 @@ async function processOcrImage(file) {
     return;
   }
 
+  const ocrPanel = $("#ocrPanel");
+  ocrPanel.open = true;
+
   const token = ++ocrRequestToken;
   if (state.ocr.previewUrl) URL.revokeObjectURL(state.ocr.previewUrl);
 
   state.ocr.loading = true;
-  state.ocr.status = "OCR en cours...";
+  state.ocr.pending = false;
+  state.ocr.status = "Lecture de la capture…";
   state.ocr.result = null;
-  state.ocr.selectedRuneId = "";
-  state.ocr.appliedPrice = null;
-  state.ocr.appliedLot = null;
+  state.ocr.targetId = "";
+  state.ocr.items = [];
+  $("#ocrPriceInput").value = "";
   state.ocr.previewUrl = URL.createObjectURL(file);
   renderOcrPanel();
+  renderMarketPrices();
 
   try {
     if (window.location.protocol === "file:") {
@@ -757,26 +793,67 @@ async function processOcrImage(file) {
       body: file,
     });
     const result = await readOcrJsonResponse(response);
-    if (token !== ocrRequestToken) return;
+    if (token !== ocrRequestToken) return false;
 
     const matchedRune = findRuneByOcrName(result.item_name);
+    const matchedItems = matchedRune ? [] : await findMarketOcrItems(result.item_name).catch(() => []);
+    if (token !== ocrRequestToken) return false;
     state.ocr.result = result;
-    state.ocr.selectedRuneId = matchedRune ? String(matchedRune.id) : "";
-    state.ocr.status = matchedRune ? "OCR termine." : `Rune non reconnue: ${result.item_name || "nom absent"}.`;
+    state.ocr.pending = true;
+    state.ocr.items = matchedItems;
+    const target = matchedRune || (matchedItems.length === 1 ? matchedItems[0] : null);
+    state.ocr.targetId = target ? String(target.id) : "";
+    state.ocr.status = target ? "Capture analysée." : "Choisis l’objet cible.";
+    $("#ocrPriceInput").value = getOcrMarketPrice(result) ?? "";
+    renderOcrControls();
 
-    if (matchedRune && getOcrApplyPrice(result)) {
-      applyOcrPrice(matchedRune, result, true);
+    const runePrice = getOcrApplyPrice(result);
+    if (matchedRune) {
+      selectTool($("#runesTab"));
+      if (runePrice) applyOcrPrice(matchedRune, runePrice);
+    } else if (!target) {
+      selectTool($("#marketTab"));
     }
   } catch (error) {
-    if (token !== ocrRequestToken) return;
+    if (token !== ocrRequestToken) return false;
     state.ocr.result = null;
-    state.ocr.selectedRuneId = "";
+    state.ocr.targetId = "";
     state.ocr.status = `OCR impossible: ${error.message}`;
   } finally {
     if (token === ocrRequestToken) {
       state.ocr.loading = false;
       renderOcrPanel();
+      renderMarketPrices();
     }
+  }
+  return true;
+}
+
+function acknowledgeOcrCapture() {
+  if (!deferredCaptureId) return;
+  localStorage.setItem(OCR_CAPTURE_CURSOR_KEY, deferredCaptureId);
+  deferredCaptureId = null;
+}
+
+async function pollOcrCaptures() {
+  try {
+    if (state.ocr.loading || state.ocr.pending) return;
+    acknowledgeOcrCapture();
+    const cursor = localStorage.getItem(OCR_CAPTURE_CURSOR_KEY) || "";
+    const response = await fetch(`${OCR_CAPTURES_PATH}?after=${encodeURIComponent(cursor)}`, { cache: "no-store" });
+    if (response.status !== 200) return;
+
+    const captureId = response.headers.get("X-Capture-Id");
+    if (!captureId) return;
+    const image = await response.blob();
+    if (!state.ocr.loading && !state.ocr.pending && await processOcrImage(image)) {
+      deferredCaptureId = captureId;
+      if (!state.ocr.pending) acknowledgeOcrCapture();
+    }
+  } catch {
+    // The local server may be stopped or restarting. Try again on the next poll.
+  } finally {
+    setTimeout(pollOcrCaptures, 1000);
   }
 }
 
@@ -1380,7 +1457,7 @@ function round2(value) {
 function exportPrices() {
   const payload = {
     exportedAt: new Date().toISOString(),
-    source: "Atelier Runes",
+    source: "Atelier Dofus",
     prices: state.prices,
     itemPrices: state.itemPrices,
     eklamePrices: state.eklamePrices,
@@ -1389,7 +1466,7 @@ function exportPrices() {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = "prix-runes-dofus.json";
+  link.download = "prix-dofus.json";
   link.click();
   URL.revokeObjectURL(url);
 }
@@ -1399,9 +1476,9 @@ function importPrices(file) {
   reader.onload = () => {
     try {
       const payload = JSON.parse(String(reader.result));
-      state.prices = parsePriceMap(payload.prices || payload);
-      state.itemPrices = parsePriceMap(payload.itemPrices || {});
-      state.eklamePrices = parsePriceMap(payload.eklamePrices || {});
+      state.prices = { ...state.prices, ...parsePriceMap(payload.prices || payload) };
+      state.itemPrices = { ...state.itemPrices, ...parsePriceMap(payload.itemPrices) };
+      state.eklamePrices = { ...state.eklamePrices, ...parsePriceMap(payload.eklamePrices) };
       savePrices();
       saveItemPrices();
       saveEklamePrices();
@@ -1416,7 +1493,8 @@ function importPrices(file) {
 function parsePriceMap(values) {
   const next = {};
   for (const [id, value] of Object.entries(values || {})) {
-    const parsed = parsePrice(value);
+    if (!/^\d+$/.test(id)) continue;
+    const parsed = parseMarketPrice(value);
     if (parsed) next[id] = parsed;
   }
   return next;
@@ -1435,7 +1513,36 @@ function escapeAttr(value) {
   return escapeHtml(value);
 }
 
+function selectTool(selectedTab) {
+  for (const tab of document.querySelectorAll("#toolTabs [role='tab']")) {
+    const selected = tab === selectedTab;
+    tab.setAttribute("aria-selected", String(selected));
+    tab.tabIndex = selected ? 0 : -1;
+    document.getElementById(tab.getAttribute("aria-controls")).hidden = !selected;
+  }
+}
+
 function bindEvents() {
+  const toolTabs = $("#toolTabs");
+  toolTabs.addEventListener("click", (event) => {
+    const tab = event.target.closest("[role='tab']");
+    if (tab) selectTool(tab);
+  });
+  toolTabs.addEventListener("keydown", (event) => {
+    const tabs = [...toolTabs.querySelectorAll("[role='tab']")];
+    const index = tabs.indexOf(event.target);
+    let nextIndex;
+    switch (event.key) {
+      case "ArrowLeft": nextIndex = (index + tabs.length - 1) % tabs.length; break;
+      case "ArrowRight": nextIndex = (index + 1) % tabs.length; break;
+      case "Home": nextIndex = 0; break;
+      case "End": nextIndex = tabs.length - 1; break;
+      default: return;
+    }
+    event.preventDefault();
+    selectTool(tabs[nextIndex]);
+    tabs[nextIndex].focus();
+  });
   $("#searchInput").addEventListener("input", (event) => {
     state.search = event.target.value;
     render();
@@ -1458,11 +1565,25 @@ function bindEvents() {
     if (file) processOcrImage(file);
     event.target.value = "";
   });
-  $("#ocrRuneSelect").addEventListener("change", (event) => {
-    state.ocr.selectedRuneId = event.target.value;
+  $("#ocrTargetSelect").addEventListener("change", (event) => {
+    state.ocr.targetId = event.target.value;
     renderOcrPanel();
   });
+  $("#ocrPriceInput").addEventListener("input", renderOcrPanel);
   $("#ocrApplyBtn").addEventListener("click", applySelectedOcrPrice);
+  $("#ocrDismissBtn").addEventListener("click", () => {
+    state.ocr.pending = false;
+    acknowledgeOcrCapture();
+    state.ocr.result = null;
+    state.ocr.targetId = "";
+    state.ocr.items = [];
+    URL.revokeObjectURL(state.ocr.previewUrl);
+    state.ocr.previewUrl = null;
+    state.ocr.status = "Capture ignorée.";
+    renderOcrPanel();
+    renderMarketPrices();
+    $("#ocrChooseBtn").focus();
+  });
   $("#ocrDropZone").addEventListener("dragenter", (event) => {
     event.preventDefault();
     $("#ocrDropZone").classList.add("is-dragover");
@@ -1596,8 +1717,10 @@ function bindEvents() {
   $("#resetBtn").addEventListener("click", () => {
     if (!confirm("Effacer tous les prix saisis ?")) return;
     state.prices = {};
+    state.itemPrices = {};
     state.eklamePrices = {};
     savePrices();
+    saveItemPrices();
     saveEklamePrices();
     render();
   });
@@ -1607,4 +1730,9 @@ renderFilters();
 renderItemFinderControls();
 renderOcrControls();
 bindEvents();
+bindMarketEvents();
 render();
+searchMarket();
+if (window.location.protocol === "http:" && ["127.0.0.1", "localhost"].includes(window.location.hostname)) {
+  pollOcrCaptures();
+}

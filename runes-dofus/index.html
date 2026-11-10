@@ -3,76 +3,73 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Atelier Runes - Dofus</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>Atelier Dofus</title>
+    <link rel="stylesheet" href="styles.css?v=5">
   </head>
   <body>
     <main class="app-shell">
       <header class="topbar">
-        <div>
-          <h1>Atelier Runes</h1>
-          <p>Prix HDV unitaires, craft 3:1, rentabilité XP par densité / 1 000 kamas.</p>
-        </div>
-        <div class="source-note">
-          Données issues de DofusDB. Utilisation soumise à la LPNC-IA 1.0.
-        </div>
+        <h1>Atelier Dofus</h1>
+        <details class="price-tools">
+          <summary>Gérer les prix</summary>
+          <div class="actions">
+            <button id="exportBtn" type="button" class="icon-button" title="Exporter les prix">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v10m0 0 4-4m-4 4-4-4M5 14v5h14v-5"/></svg>
+              Exporter
+            </button>
+            <button id="importBtn" type="button" class="icon-button" title="Importer des prix">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21V11m0 0 4 4m-4-4-4 4M5 10V5h14v5"/></svg>
+              Importer
+            </button>
+            <button id="resetBtn" type="button" class="icon-button danger" title="Effacer les prix">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6m4-6v6M9 7l1-3h4l1 3m-9 0 1 14h10l1-14"/></svg>
+              Effacer
+            </button>
+            <input id="importFile" type="file" accept="application/json" hidden>
+          </div>
+        </details>
       </header>
 
-      <section class="summary-grid" aria-label="Recommandations">
-        <article class="summary-panel xp">
-          <span class="panel-label">Meilleur XP</span>
-          <strong id="bestXpName">Prix requis</strong>
-          <span id="bestXpMeta">Renseigne au moins un prix.</span>
-        </article>
-        <article class="summary-panel craft">
-          <span class="panel-label">Meilleur craft revente</span>
-          <strong id="bestCraftName">Aucune opportunité</strong>
-          <span id="bestCraftMeta">Comparaison directe avec le prix HDV.</span>
-        </article>
-        <article class="summary-panel prices">
-          <span class="panel-label">Prix renseignés</span>
-          <strong id="pricedCount">0 / 105</strong>
-          <span id="saveStatus">Sauvegarde locale active.</span>
-        </article>
-        <article class="summary-panel economy">
-          <span class="panel-label">Meilleure économie</span>
-          <strong id="bestSavingName">Prix requis</strong>
-          <span id="bestSavingMeta">Pour acheter moins cher via craft.</span>
-        </article>
-      </section>
+      <div id="toolTabs" class="tool-tabs" role="tablist" aria-label="Outils">
+        <button id="marketTab" type="button" role="tab" aria-selected="true" aria-controls="marketView">Prix &amp; crafts</button>
+        <button id="runesTab" type="button" role="tab" aria-selected="false" aria-controls="runesView" tabindex="-1">Prix des runes</button>
+        <button id="itemsTab" type="button" role="tab" aria-selected="false" aria-controls="itemsView" tabindex="-1">Items FM</button>
+        <button id="eklamesTab" type="button" role="tab" aria-selected="false" aria-controls="eklamesView" tabindex="-1">Eklames</button>
+      </div>
 
-      <section class="ocr-panel" aria-label="OCR prix runes">
-        <div class="ocr-header">
-          <div>
-            <span class="panel-label">OCR HDV</span>
-            <h2>Capture de rune</h2>
-          </div>
-          <span id="ocrStatus" class="ocr-status">Colle ou depose une capture HDV.</span>
-        </div>
+      <details id="ocrPanel" class="ocr-panel">
+        <summary>
+          <span class="ocr-title">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM8 13l2.5-3 3 4 2-2.5L20 17M8 8h.01"/></svg>
+            Importer une capture HDV
+          </span>
+          <span id="ocrStatus" class="ocr-status" role="status">Colle une capture ou choisis un fichier.</span>
+        </summary>
 
         <div class="ocr-workspace">
-          <div id="ocrDropZone" class="ocr-dropzone" tabindex="0">
+          <div id="ocrDropZone" class="ocr-dropzone">
             <input id="ocrFileInput" type="file" accept="image/*" hidden>
             <button id="ocrChooseBtn" type="button" class="icon-button primary" title="Choisir une capture">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM8 13l2.5-3 3 4 2-2.5L20 17M8 8h.01"/></svg>
-              Image
+              Choisir une image
             </button>
             <span>Ctrl+V ou glisser une image</span>
+            <button id="ocrDismissBtn" type="button" class="icon-button" hidden>Ignorer la capture</button>
           </div>
 
           <div id="ocrPreviewWrap" class="ocr-preview-wrap" hidden>
             <img id="ocrPreview" alt="Capture HDV">
           </div>
 
-          <div class="ocr-result">
+          <div class="ocr-result" hidden>
             <div class="ocr-result-grid">
               <article>
-                <span class="panel-label">Detecte</span>
+                <span class="panel-label">Objet détecté</span>
                 <strong id="ocrDetectedName">-</strong>
-                <span id="ocrDetectedMeta">Aucune capture traitee.</span>
+                <span id="ocrDetectedMeta">Aucune capture traitée.</span>
               </article>
               <article>
-                <span class="panel-label">Prix applique</span>
+                <span class="panel-label">Prix lu</span>
                 <strong id="ocrDetectedPrice">-</strong>
                 <span id="ocrPriceMeta">Moyenne pratique visible.</span>
               </article>
@@ -80,141 +77,173 @@
 
             <div class="ocr-apply-row">
               <label class="field">
-                <span>Rune cible</span>
-                <select id="ocrRuneSelect"></select>
+                <span>Objet cible</span>
+                <select id="ocrTargetSelect"></select>
+              </label>
+              <label id="ocrPriceField" class="field" hidden>
+                <span>Prix à enregistrer (k/u)</span>
+                <input id="ocrPriceInput" type="text" inputmode="decimal" autocomplete="off">
               </label>
               <button id="ocrApplyBtn" type="button" class="icon-button" title="Appliquer le prix OCR" disabled>
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
-                Appliquer
+                Appliquer le prix
               </button>
             </div>
 
             <div id="ocrLots" class="ocr-lots" aria-live="polite"></div>
           </div>
         </div>
-      </section>
+      </details>
 
-      <section class="toolbar" aria-label="Filtres et actions">
-        <label class="field search-field">
-          <span>Recherche</span>
-          <input id="searchInput" type="search" placeholder="Fo, Pa Sa, Do Cri...">
-        </label>
-        <label class="field">
-          <span>Famille</span>
-          <select id="familyFilter"></select>
-        </label>
-        <label class="field">
-          <span>Décision</span>
-          <select id="decisionFilter">
-            <option value="all">Toutes</option>
-            <option value="craft">Crafter rentable</option>
-            <option value="buy">Acheter direct</option>
-            <option value="missing">Prix manquants</option>
-            <option value="xp">Top XP</option>
-          </select>
-        </label>
-        <label class="field">
-          <span>Tri</span>
-          <select id="sortSelect">
-            <option value="targetCost">Coût / 1 000 densité</option>
-            <option value="profit">Profit craft</option>
-            <option value="saving">Économie achat</option>
-            <option value="density">Densité</option>
-            <option value="name">Nom</option>
-          </select>
-        </label>
-        <div class="actions">
-          <button id="exportBtn" type="button" class="icon-button" title="Exporter les prix">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v10m0 0 4-4m-4 4-4-4M5 14v5h14v-5"/></svg>
-            Exporter
-          </button>
-          <button id="importBtn" type="button" class="icon-button" title="Importer des prix">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21V11m0 0 4 4m-4-4-4 4M5 10V5h14v5"/></svg>
-            Importer
-          </button>
-          <button id="resetBtn" type="button" class="icon-button danger" title="Effacer les prix">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6m4-6v6M9 7l1-3h4l1 3m-9 0 1 14h10l1-14"/></svg>
-            Reset
-          </button>
-          <input id="importFile" type="file" accept="application/json" hidden>
-        </div>
-      </section>
-
-      <section class="legend" aria-label="Légende">
-        <span><i class="dot craft"></i> Craft moins cher que l'HDV</span>
-        <span><i class="dot buy"></i> Achat direct préférable</span>
-        <span><i class="dot xp"></i> Meilleure rentabilité XP</span>
-        <span><i class="dot missing"></i> Prix insuffisants</span>
-      </section>
-
-      <section class="eklame-tool" aria-label="Comparateur prix Eklames">
+      <section id="marketView" class="workspace" role="tabpanel" aria-labelledby="marketTab">
         <div class="finder-header">
           <div>
-            <span class="panel-label">Eklames</span>
-            <h2>Quel tier acheter</h2>
+            <h2>Prix HDV et coûts de craft</h2>
+            <p>Recherche un objet, saisis son prix unitaire ou ouvre sa recette.</p>
           </div>
-          <span id="eklameSaveStatus" class="finder-status">
-            Prix manuels, tiers issus de
-            <a href="https://dofusdb.fr/fr/database/items?types=310&sortBy=-id" target="_blank" rel="noreferrer">DofusDB</a>.
-          </span>
+          <p id="marketStatus" class="finder-status" role="status"></p>
         </div>
-
-        <div class="finder-controls eklame-controls">
+        <div class="finder-controls market-controls">
+          <label class="field search-field">
+            <span>Objet</span>
+            <input id="marketSearch" type="search" placeholder="Bois de Frêne, Gelano…">
+          </label>
           <label class="field">
-            <span>Tier voulu</span>
-            <select id="eklameTargetSelect">
-              <option value="31518">Eklame inferieure</option>
-              <option value="31519">Eklame ordinaire</option>
-              <option value="31520">Eklame superieure</option>
-              <option value="31521">Eklame majestueuse</option>
-              <option value="31522">Eklame supreme</option>
+            <span>Catégorie</span>
+            <select id="marketCategory">
+              <option value="market">Ressources et équipements</option>
+              <option value="2">Ressources</option>
+              <option value="0">Équipements</option>
+              <option value="all">Tous les objets</option>
             </select>
           </label>
+          <button id="marketRetry" class="icon-button" type="button" hidden>Réessayer</button>
         </div>
 
-        <div class="finder-metrics eklame-metrics" aria-label="Synthese Eklames">
-          <article>
-            <span class="panel-label">Prix renseignes</span>
-            <strong id="eklamePricedCount">0 / 5</strong>
-            <span>Sauvegarde locale active.</span>
-          </article>
-          <article>
-            <span class="panel-label">Meilleur achat</span>
-            <strong id="eklameBestOpenName">Prix requis</strong>
-            <span id="eklameBestOpenMeta">Renseigne le tier voulu ou un tier superieur.</span>
-          </article>
-          <article>
-            <span class="panel-label">Economie vs direct</span>
-            <strong id="eklameBestBaseName">Direct inconnu</strong>
-            <span id="eklameBestBaseMeta">Renseigne le tier voulu pour comparer.</span>
-          </article>
-        </div>
+        <section id="marketDetail" class="market-detail" aria-labelledby="marketItemName" hidden>
+          <div class="finder-header">
+            <div>
+              <h3 id="marketItemName" class="market-item-label" tabindex="-1"></h3>
+              <p id="marketItemMeta"></p>
+            </div>
+            <button id="marketClose" class="icon-button" type="button">Fermer</button>
+          </div>
+          <div class="market-actions">
+            <label class="field">
+              <span>Prix HDV (k/u)</span>
+              <input id="marketItemPrice" type="text" inputmode="decimal" autocomplete="off">
+            </label>
+            <button id="marketOcrTarget" class="icon-button" type="button" hidden>Associer à la capture</button>
+          </div>
+          <p id="marketRecipeStatus" role="status"></p>
+          <div id="marketRecipeTable" class="item-table-wrap" role="region" aria-label="Ingrédients de la recette" tabindex="0" hidden>
+            <table class="market-table">
+              <thead><tr><th>Ingrédient</th><th>Quantité</th><th>Prix HDV (k/u)</th><th>Sous-total</th></tr></thead>
+              <tbody id="marketIngredients"></tbody>
+            </table>
+          </div>
+        </section>
 
-        <div class="item-table-wrap" aria-label="Tableau comparateur Eklames">
-          <table class="eklame-table">
-            <thead>
-              <tr>
-                <th>Eklame</th>
-                <th>Prix HDV</th>
-                <th>Recu</th>
-                <th>Cout / tier voulu</th>
-                <th>Decision</th>
-                <th>Vs direct</th>
-                <th>Detail</th>
-              </tr>
-            </thead>
-            <tbody id="eklameTable"></tbody>
+        <div class="item-table-wrap" role="region" aria-label="Catalogue des objets" tabindex="0">
+          <table class="market-table">
+            <thead><tr><th>Objet</th><th>Type</th><th>Niveau</th><th>Prix HDV (k/u)</th></tr></thead>
+            <tbody id="marketResults"></tbody>
           </table>
+        </div>
+        <div class="market-actions" id="marketPages" hidden>
+          <button id="marketPrev" class="icon-button" type="button">Précédent</button>
+          <span id="marketPage"></span>
+          <button id="marketNext" class="icon-button" type="button">Suivant</button>
         </div>
       </section>
 
-      <section class="item-finder" aria-label="Items pour XP FM">
+      <section id="runesView" class="workspace" role="tabpanel" aria-labelledby="runesTab" hidden>
         <div class="finder-header">
           <div>
-            <span class="panel-label">Items FM</span>
-            <h2>Items pour XP avec une rune</h2>
+            <h2>Acheter ou crafter des runes</h2>
+            <p>Compare les prix HDV et le coût pour 1 000 points de densité.</p>
           </div>
-          <span id="itemFinderStatus" class="finder-status">Recherche prête.</span>
+          <p class="price-coverage">
+            <strong id="pricedCount">0 / 105</strong> prix saisis
+            <span id="saveStatus" role="status">Sauvegarde locale active.</span>
+          </p>
+        </div>
+
+        <section class="summary-grid" aria-label="Recommandations">
+          <article class="summary-panel">
+            <span class="panel-label">Meilleur rendement XP</span>
+            <strong id="bestXpName">Prix requis</strong>
+            <span id="bestXpMeta">Renseigne au moins un prix.</span>
+          </article>
+          <article class="summary-panel">
+            <span class="panel-label">Meilleure revente après craft</span>
+            <strong id="bestCraftName">Aucune opportunité</strong>
+            <span id="bestCraftMeta">Comparaison directe avec le prix HDV.</span>
+          </article>
+          <article class="summary-panel">
+            <span class="panel-label">Meilleure économie à l’achat</span>
+            <strong id="bestSavingName">Prix requis</strong>
+            <span id="bestSavingMeta">Pour acheter moins cher via craft.</span>
+          </article>
+        </section>
+
+        <section class="toolbar" aria-label="Filtres des runes">
+          <label class="field search-field">
+            <span>Rune</span>
+            <input id="searchInput" type="search" placeholder="Fo, Pa Sa…">
+          </label>
+          <label class="field">
+            <span>Famille</span>
+            <select id="familyFilter"></select>
+          </label>
+          <label class="field">
+            <span>Décision</span>
+            <select id="decisionFilter">
+              <option value="all">Toutes</option>
+              <option value="craft">Crafter rentable</option>
+              <option value="buy">Acheter direct</option>
+              <option value="missing">Prix manquants</option>
+              <option value="xp">Top XP</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Tri</span>
+            <select id="sortSelect">
+              <option value="targetCost">Coût / 1 000</option>
+              <option value="profit">Profit craft</option>
+              <option value="saving">Économie achat</option>
+              <option value="density">Densité</option>
+              <option value="name">Nom</option>
+            </select>
+          </label>
+        </section>
+
+        <p class="table-hint">Fais défiler le tableau pour voir les coûts et les détails.</p>
+        <section class="table-wrap" aria-label="Tableau des runes" tabindex="0">
+          <table>
+            <thead>
+              <tr>
+                <th>Rune</th>
+                <th>Prix HDV</th>
+                <th>Densité</th>
+                <th>Coût optimal</th>
+                <th>Décision</th>
+                <th>Écart achat / craft</th>
+                <th>Coût / 1 000 dens.</th>
+                <th>Détail</th>
+              </tr>
+            </thead>
+            <tbody id="runeTable"></tbody>
+          </table>
+        </section>
+      </section>
+
+      <section id="itemsView" class="workspace" role="tabpanel" aria-labelledby="itemsTab" hidden>
+        <div class="finder-header">
+          <div>
+            <h2>Trouver un item pour XP</h2>
+          </div>
+          <span id="itemFinderStatus" class="finder-status" role="status">Recherche prête.</span>
         </div>
 
         <div class="finder-controls">
@@ -251,7 +280,7 @@
             <input id="itemSearchInput" type="search" placeholder="Amulette, cape...">
           </label>
           <label class="field">
-            <span>Tri items</span>
+            <span>Tri</span>
             <select id="itemSortSelect">
               <option value="potential">Potentiel XP</option>
               <option value="cost">Coût / densité</option>
@@ -283,7 +312,7 @@
           </article>
         </div>
 
-        <div class="item-table-wrap" aria-label="Tableau des items FM">
+        <div class="item-table-wrap" role="region" aria-label="Tableau des items FM" tabindex="0">
           <table class="item-table">
             <thead>
               <tr>
@@ -302,32 +331,74 @@
         </div>
       </section>
 
-      <section class="table-wrap" aria-label="Tableau des runes">
-        <table>
-          <thead>
-            <tr>
-              <th>Rune</th>
-              <th>Densité</th>
-              <th>Prix HDV</th>
-              <th>Coût optimal</th>
-              <th>Décision</th>
-              <th>Gain / perte</th>
-              <th>Coût / 1 000 dens.</th>
-              <th>Détail</th>
-            </tr>
-          </thead>
-          <tbody id="runeTable"></tbody>
-        </table>
+      <section id="eklamesView" class="workspace" role="tabpanel" aria-labelledby="eklamesTab" hidden>
+        <div class="finder-header">
+          <div>
+            <h2>Comparer les Eklames</h2>
+          </div>
+          <span id="eklameSaveStatus" class="finder-status">
+            Prix manuels, tiers issus de
+            <a href="https://dofusdb.fr/fr/database/items?types=310&sortBy=-id" target="_blank" rel="noreferrer">DofusDB</a>.
+          </span>
+        </div>
+
+        <div class="finder-controls eklame-controls">
+          <label class="field">
+            <span>Palier recherché</span>
+            <select id="eklameTargetSelect">
+              <option value="31518">Eklame inferieure</option>
+              <option value="31519">Eklame ordinaire</option>
+              <option value="31520">Eklame superieure</option>
+              <option value="31521">Eklame majestueuse</option>
+              <option value="31522">Eklame supreme</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="finder-metrics eklame-metrics" aria-label="Synthèse Eklames">
+          <article>
+            <span class="panel-label">Prix renseignés</span>
+            <strong id="eklamePricedCount">0 / 5</strong>
+            <span>Sauvegarde locale active.</span>
+          </article>
+          <article>
+            <span class="panel-label">Meilleur achat</span>
+            <strong id="eklameBestOpenName">Prix requis</strong>
+            <span id="eklameBestOpenMeta">Renseigne le tier voulu ou un tier superieur.</span>
+          </article>
+          <article>
+            <span class="panel-label">Économie à l’achat</span>
+            <strong id="eklameBestBaseName">Direct inconnu</strong>
+            <span id="eklameBestBaseMeta">Renseigne le tier voulu pour comparer.</span>
+          </article>
+        </div>
+
+        <div class="item-table-wrap" role="region" aria-label="Tableau comparateur Eklames" tabindex="0">
+          <table class="eklame-table">
+            <thead>
+              <tr>
+                <th>Eklame</th>
+                <th>Prix HDV</th>
+                <th>Quantité reçue</th>
+                <th>Coût par unité</th>
+                <th>Décision</th>
+                <th>Économie</th>
+                <th>Détail</th>
+              </tr>
+            </thead>
+            <tbody id="eklameTable"></tbody>
+          </table>
+        </div>
       </section>
 
       <footer class="footer">
-        <p>
-          Les prix sont stockes dans le navigateur via localStorage. Les calculs ignorent les taxes HDV, supposent toujours 3 runes inferieures pour 1 rune superieure, comparent les Eklames par double-clic 1:2, et le finder d'items interroge DofusDB en direct.
-        </p>
+        <p>Les prix sont enregistrés dans ce navigateur. Les calculs excluent les taxes HDV et utilisent 3 runes du palier inférieur par craft. Un double-clic sur une Eklame donne 2 Eklames du palier inférieur.</p>
+        <p>Données issues de DofusDB. Utilisation soumise à la LPNC-IA 1.0.</p>
       </footer>
     </main>
 
     <script src="runes-data.js"></script>
-    <script src="app.js"></script>
+    <script src="market.js?v=2"></script>
+    <script src="app.js?v=4"></script>
   </body>
 </html>

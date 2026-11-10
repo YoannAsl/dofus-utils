@@ -38,7 +38,7 @@ From the workspace root:
 .\start-runes-ocr.ps1
 ```
 
-Open the printed local URL, copy a Dofus HDV screenshot to the clipboard, then paste it into Atelier Runes. The page sends the image to the local OCR endpoint, matches the detected item name to a rune, and stores the practical visible average unit price in the existing local rune prices.
+Open the printed local URL. Follow the [ShareX setup](../runes-dofus/README.md#import-sharex-captures-automatically) to import Dofus HDV screenshots automatically, or paste a screenshot into Atelier Runes. The page matches the detected item name to a rune and stores the practical visible average unit price.
 
 If you are already in `runes-dofus`, this starts the same server:
 
