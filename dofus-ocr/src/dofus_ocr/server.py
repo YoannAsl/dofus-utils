@@ -4,9 +4,13 @@ import argparse
 import json
 import mimetypes
 import sys
+from collections import deque
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from threading import Lock
+from urllib.parse import parse_qs
+from uuid import uuid4
 
 from .parser import parse_auction_ocr, result_to_dict
 from .windows_ocr import run_windows_ocr
@@ -14,18 +18,27 @@ from . import windows_ocr
 
 
 MAX_UPLOAD_BYTES = 25 * 1024 * 1024
+CAPTURES_PATH = "/api/captures"
+PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 
 
 class RunesOcrHandler(SimpleHTTPRequestHandler):
     server_version = "DofusRunesOcr/0.1"
+    captures: deque[tuple[int, bytes]]
+    captures_lock: Lock
+    capture_session: str
 
     def log_message(self, format: str, *args) -> None:
         return
 
     def end_headers(self) -> None:
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        if self.path.split("?", 1)[0] == CAPTURES_PATH:
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("X-Content-Type-Options", "nosniff")
+        else:
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+            self.send_header("Access-Control-Allow-Headers", "Content-Type")
         super().end_headers()
 
     def do_OPTIONS(self) -> None:
@@ -33,25 +46,84 @@ class RunesOcrHandler(SimpleHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self) -> None:
-        if self.path.split("?", 1)[0] == "/api/health":
+        path, _, query = self.path.partition("?")
+        if path == CAPTURES_PATH:
+            if self._allow_capture_request():
+                self._send_next_capture(query)
+            return
+        if path == "/api/health":
             self._send_json(build_health_payload())
             return
 
         super().do_GET()
 
     def do_POST(self) -> None:
-        if self.path.split("?", 1)[0] != "/api/ocr":
+        path = self.path.split("?", 1)[0]
+        if path == CAPTURES_PATH and not self._allow_capture_request():
+            return
+        if path not in ("/api/ocr", CAPTURES_PATH):
             self.send_error(404, "Not found")
             return
 
         try:
-            self._handle_ocr_upload()
+            if path == CAPTURES_PATH:
+                self._receive_capture()
+            else:
+                self._handle_ocr_upload()
         except ValueError as exc:
             self._send_json({"error": str(exc), "server": build_health_payload()}, status=400)
         except Exception as exc:
             self._send_json({"error": str(exc), "server": build_health_payload()}, status=500)
 
-    def _handle_ocr_upload(self) -> None:
+    def _allow_capture_request(self) -> bool:
+        port = self.server.server_port
+        local_hosts = ("127.0.0.1", "localhost")
+        hosts = local_hosts if port == 80 else tuple(f"{host}:{port}" for host in local_hosts)
+        if (
+            self.client_address[0] == "127.0.0.1"
+            and self.headers.get("Host") in hosts
+            and self.headers.get("Origin") is None
+            and self.headers.get("Sec-Fetch-Site") in (None, "same-origin")
+        ):
+            return True
+        self.send_error(403, "Capture import is local only")
+        return False
+
+    def _receive_capture(self) -> None:
+        if self.headers.get("Content-Type") != "image/png":
+            raise ValueError("ShareX capture must be a PNG image")
+        image_bytes = self._read_image_body()
+        if not image_bytes.startswith(PNG_SIGNATURE):
+            raise ValueError("ShareX capture must be a PNG image")
+
+        with self.captures_lock:
+            sequence = self.captures[-1][0] + 1 if self.captures else 1
+            self.captures.append((sequence, image_bytes))
+        self.send_response(204)
+        self.end_headers()
+
+    def _send_next_capture(self, query: str) -> None:
+        cursor = parse_qs(query).get("after", [""])[0]
+        session, _, sequence = cursor.partition(":")
+        after = 0
+        if session == self.capture_session and len(sequence) <= 16 and sequence.isdecimal():
+            after = int(sequence)
+        with self.captures_lock:
+            capture = next((entry for entry in self.captures if entry[0] > after), None)
+        if capture is None:
+            self.send_response(204)
+            self.end_headers()
+            return
+
+        sequence, image_bytes = capture
+        self.send_response(200)
+        self.send_header("X-Capture-Id", f"{self.capture_session}:{sequence}")
+        self.send_header("Content-Type", "image/png")
+        self.send_header("Content-Length", str(len(image_bytes)))
+        self.end_headers()
+        self.wfile.write(image_bytes)
+
+    def _read_image_body(self) -> bytes:
         content_length = self.headers.get("Content-Length")
         if not content_length:
             raise ValueError("missing image body")
@@ -66,15 +138,18 @@ class RunesOcrHandler(SimpleHTTPRequestHandler):
         if length > MAX_UPLOAD_BYTES:
             raise ValueError("image is too large")
 
+        image_bytes = self.rfile.read(length)
+        if len(image_bytes) != length:
+            raise ValueError("incomplete image body")
+        return image_bytes
+
+    def _handle_ocr_upload(self) -> None:
         content_type = self.headers.get("Content-Type", "application/octet-stream").split(";", 1)[0]
         content_type = content_type.strip().lower()
         if content_type != "application/octet-stream" and not content_type.startswith("image/"):
             raise ValueError("request body must be an image")
 
-        image_bytes = self.rfile.read(length)
-        if not image_bytes:
-            raise ValueError("empty image body")
-
+        image_bytes = self._read_image_body()
         extension = mimetypes.guess_extension(content_type) or ".png"
         if extension == ".jpe":
             extension = ".jpg"
@@ -121,6 +196,10 @@ def default_static_dir() -> Path:
 
 def make_handler(static_dir: Path):
     class Handler(RunesOcrHandler):
+        captures = deque(maxlen=10)
+        captures_lock = Lock()
+        capture_session = uuid4().hex
+
         def __init__(self, *args, **kwargs):
             super().__init__(*args, directory=str(static_dir), **kwargs)
 
