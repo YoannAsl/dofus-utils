@@ -469,6 +469,7 @@ function renderPriceViews(group, id) {
   if (!group || group === "eklamePrices") renderEklameTool();
   if (!group || itemFinderUsesPrice(group, id)) renderItemFinder();
   if (!group || priceStore.groupForItem(id) === group) renderMarketPrices(id);
+  if (!group || group === "itemPrices") renderBreedingPrices();
 
   if (activeSelector && !active.isConnected) {
     const next = document.querySelector(activeSelector);
@@ -1555,6 +1556,7 @@ renderItemFinderControls();
 renderOcrControls();
 bindEvents();
 bindMarketEvents();
+bindBreedingEvents();
 renderPriceViews();
 renderOcrPanel();
 renderMarketOcrTarget();

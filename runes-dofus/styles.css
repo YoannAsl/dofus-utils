@@ -484,6 +484,7 @@ h1 {
 .price-input:focus,
 .item-price-input:focus,
 .eklame-price-input:focus,
+.breeding-price-input:focus,
 .market-ingredient-price:focus {
   border-color: var(--blue);
   box-shadow: 0 0 0 3px rgba(34, 93, 183, 0.14);
@@ -609,6 +610,37 @@ h1 {
   min-width: 920px;
 }
 
+.breeding-controls {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-bottom: 12px;
+}
+
+.breeding-controls .finder-status {
+  margin: 0 0 8px;
+  text-align: left;
+}
+
+.breeding-table {
+  min-width: 740px;
+}
+
+.breeding-table th[scope="row"] {
+  color: var(--ink);
+  font-size: inherit;
+  white-space: normal;
+}
+
+.breeding-table .badge {
+  margin-inline-start: 8px;
+}
+
+.breeding-table .breeding-gauge-summary {
+  display: none;
+}
+
 .item-cell {
   min-width: 200px;
 }
@@ -704,6 +736,7 @@ tbody tr.is-ocr-updated {
 .price-input,
 .item-price-input,
 .eklame-price-input,
+.breeding-price-input,
 .market-ingredient-price {
   width: 92px;
   height: 36px;
@@ -783,6 +816,31 @@ tbody tr.is-ocr-updated {
 }
 
 @media (max-width: 760px) {
+  .breeding-table {
+    min-width: 0;
+  }
+
+  .breeding-gauge,
+  .breeding-table .item-icon {
+    display: none;
+  }
+
+  .breeding-table .breeding-gauge-summary {
+    display: block;
+    font-weight: 400;
+  }
+
+  .breeding-table .badge {
+    display: block;
+    width: fit-content;
+    margin: 3px 0 0;
+    white-space: normal;
+  }
+
+  .breeding-price-input {
+    width: 72px;
+  }
+
   .toolbar {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

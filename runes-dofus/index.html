@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Atelier Dofus</title>
-    <link rel="stylesheet" href="styles.css?v=6">
+    <link rel="stylesheet" href="styles.css?v=7">
   </head>
   <body>
     <main class="app-shell">
@@ -35,6 +35,7 @@
         <button id="runesTab" type="button" role="tab" aria-selected="false" aria-controls="runesView" tabindex="-1">Prix des runes</button>
         <button id="itemsTab" type="button" role="tab" aria-selected="false" aria-controls="itemsView" tabindex="-1">Items FM</button>
         <button id="eklamesTab" type="button" role="tab" aria-selected="false" aria-controls="eklamesView" tabindex="-1">Eklames</button>
+        <button id="breedingTab" type="button" role="tab" aria-selected="false" aria-controls="breedingView" tabindex="-1">Carburants d’élevage</button>
       </div>
 
       <details id="ocrPanel" class="ocr-panel">
@@ -403,6 +404,35 @@
         </div>
       </section>
 
+      <section id="breedingView" class="workspace" role="tabpanel" aria-labelledby="breedingTab" hidden>
+        <div class="finder-header">
+          <div>
+            <h2>Comparer les carburants d’élevage</h2>
+            <p>Saisis les prix unitaires de l’HDV pour comparer la recharge par tranche de 1 000 kamas. Le ratio utilise la recharge complète, avant application du plafond.</p>
+          </div>
+          <a href="https://dofusdb.fr/fr/database/items?types=326&amp;sortBy=-id" target="_blank" rel="noreferrer">DofusDB</a>
+        </div>
+        <div class="breeding-controls">
+          <label class="field">
+            <span>Catégorie</span>
+            <select id="breedingCategory"></select>
+          </label>
+          <p id="breedingStatus" class="finder-status" role="status"></p>
+        </div>
+        <div class="item-table-wrap" role="region" aria-label="Comparaison des carburants d’élevage" tabindex="0">
+          <table class="breeding-table">
+            <thead><tr>
+              <th scope="col">Carburant</th>
+              <th scope="col" class="breeding-gauge">Recharge (pts)</th>
+              <th scope="col" class="breeding-gauge">Plafond de jauge (pts)</th>
+              <th scope="col">Prix HDV (k/u)</th>
+              <th scope="col">Pts / 1 000 k</th>
+            </tr></thead>
+            <tbody id="breedingTable"></tbody>
+          </table>
+        </div>
+      </section>
+
       <footer class="footer">
         <p>Les prix sont enregistrés dans ce navigateur. Les calculs excluent les taxes HDV et utilisent 3 runes du palier inférieur par craft. Un double-clic sur une Eklame donne 2 Eklames du palier inférieur.</p>
         <p>Données issues de DofusDB. Utilisation soumise à la LPNC-IA 1.0.</p>
@@ -415,6 +445,8 @@
     <script src="prices.js?v=2"></script>
     <script src="pricing.js?v=2"></script>
     <script src="market.js?v=6"></script>
-    <script src="app.js?v=8"></script>
+    <script src="breeding-data.js"></script>
+    <script src="breeding.js"></script>
+    <script src="app.js?v=9"></script>
   </body>
 </html>
