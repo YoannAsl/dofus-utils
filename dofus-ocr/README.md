@@ -38,7 +38,7 @@ From the workspace root:
 .\start-runes-ocr.ps1
 ```
 
-Open the printed local URL. Follow the [ShareX setup](../runes-dofus/README.md#import-sharex-captures-automatically) to import Dofus HDV screenshots automatically, or paste a screenshot into Atelier Runes. The page matches the detected item name to a rune and stores the practical visible average unit price.
+Open the printed local URL and paste a screenshot into Atelier Dofus. The app saves the detected unit price automatically when it identifies a single item and reads a usable price. To send screenshots directly from ShareX, follow the [ShareX setup](../runes-dofus/README.md#import-sharex-captures-automatically).
 
 If you are already in `runes-dofus`, this starts the same server:
 

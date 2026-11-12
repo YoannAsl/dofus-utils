@@ -57,6 +57,13 @@ function marketNamePattern(value) {
 async function findMarketOcrItems(name) {
   const pattern = marketNamePattern(name || "");
   if (!pattern) return [];
+
+  // A clipped capture can cut off the last word of a long breeding fuel name.
+  const fuelName = new RegExp(`^${pattern}[a-z0-9œæ]*$`);
+  const fuels = Object.values(BREEDING_FUELS).flat()
+    .filter((fuel) => fuelName.test(normalizeText(fuel.name)));
+  if (fuels.length) return fuels;
+
   const url = marketQuery("items", MARKET_ITEM_FIELDS);
   url.searchParams.set("$limit", MARKET_PAGE_SIZE);
   url.searchParams.set("slug.fr[$regex]", `^${pattern}$`);

@@ -556,7 +556,7 @@ function getOcrTarget() {
 }
 
 function getOcrDetectedMeta(result, selected) {
-  if (result.warnings?.length) return "Vérifie les lots et le prix avant de l’appliquer.";
+  if (result.warnings?.length) return "Vérifie les lots et le prix détectés.";
   if (selected) return `Objet cible · ${marketItemName(selected)}.`;
   return "Ouvre l’objet dans Prix & crafts, puis choisis Associer à la capture.";
 }
@@ -678,16 +678,18 @@ async function processOcrImage(file) {
     const target = matchedRune || (matchedItems.length === 1 ? matchedItems[0] : null);
     state.ocr.targetId = target ? String(target.id) : "";
     state.ocr.status = target ? "Capture analysée." : "Choisis l’objet cible.";
-    $("#ocrPriceInput").value = getOcrMarketPrice(result) ?? "";
+    const marketPrice = getOcrMarketPrice(result);
+    $("#ocrPriceInput").value = marketPrice ?? "";
     renderOcrControls();
 
-    const runePrice = getOcrApplyPrice(result);
     if (matchedRune) {
       selectTool($("#runesTab"));
-      if (runePrice) applyOcrPrice(matchedRune, runePrice);
     } else if (!target) {
       selectTool($("#marketTab"));
     }
+
+    const price = matchedRune ? getOcrApplyPrice(result) : marketPrice;
+    if (target && price && (matchedRune || !result.warnings?.length)) applyOcrPrice(target, price);
   } catch (error) {
     if (token !== ocrRequestToken) return false;
     state.ocr.result = null;

@@ -22,7 +22,7 @@ Or from the workspace root:
 .\start-runes-ocr.ps1
 ```
 
-Open the printed `http://127.0.0.1:8765/` URL. Paste, drop, or choose an image in **Importer une capture HDV**. Check the suggested item and price, then click **Appliquer le prix**. If the name is misread, open the item in the catalogue and click **Associer à la capture**. Recognized runes still save automatically when the screenshot contains readable lot prices.
+Open the printed `http://127.0.0.1:8765/` URL. Paste, drop, or choose an image in **Importer une capture HDV**. The app saves the detected price automatically when it identifies a single item and reads a usable price. If OCR flags a catalogue price, check the lots before clicking **Appliquer le prix**. If the name is misread, open the item in the catalogue and click **Associer à la capture**.
 
 ## Import ShareX captures automatically
 
