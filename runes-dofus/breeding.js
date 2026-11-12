@@ -1,7 +1,7 @@
-const breedingRatioFormatter = new Intl.NumberFormat("fr-FR", { maximumSignificantDigits: 4 });
+const BREEDING_GAUGE_MAX = 200_000;
 
 function renderBreedingTable() {
-  const fuels = BREEDING_FUELS[$("#breedingCategory").value];
+  const fuels = BREEDING_FUELS[$("#breedingCategory input:checked").value];
   $("#breedingTable").innerHTML = fuels.map((fuel) => {
     const recharge = formatQuantity(fuel.recharge);
     const cap = fuel.cap === null ? null : formatQuantity(fuel.cap);
@@ -21,40 +21,64 @@ function renderBreedingTable() {
           data-fuel-id="${fuel.id}" aria-label="${escapeAttr(`Prix HDV de ${fuel.name} (kamas par unité)`)}">
       </td>
       <td class="num">
-        <span data-fuel-ratio></span>
-        <span class="badge craft" hidden>Meilleur ratio</span>
+        <span data-fuel-cost></span>
+        <div class="breeding-badges">
+          <span class="badge ${cap === null ? "craft" : "neutral"}" data-best-tier hidden>
+            ${cap === null ? "Meilleur jusqu’au max." : "Meilleur du palier"}
+          </span>
+        </div>
       </td>
+      <td class="num" data-fuel-fill-cost></td>
     </tr>`;
   }).join("");
   renderBreedingPrices();
 }
 
 function renderBreedingPrices() {
-  const fuels = BREEDING_FUELS[$("#breedingCategory").value];
+  const fuels = BREEDING_FUELS[$("#breedingCategory input:checked").value];
   const rows = $("#breedingTable").rows;
-  const ratios = fuels.map((fuel) => {
+  const caps = [...new Set(fuels.map((fuel) => fuel.cap ?? BREEDING_GAUGE_MAX))].sort((a, b) => a - b);
+  const tierWidths = new Map(caps.map((cap, index) => [cap, cap - (caps[index - 1] ?? 0)]));
+  const lowestCostByCap = new Map();
+  const costs = fuels.map((fuel) => {
     const price = marketPriceOf(fuel.id);
-    return price === null ? 0 : (fuel.recharge * 1000) / price;
+    if (price === null) return null;
+
+    const cost = (price * 10_000) / fuel.recharge;
+    const tierWidth = tierWidths.get(fuel.cap ?? BREEDING_GAUGE_MAX);
+    const unitsToFill = Math.ceil(tierWidth / fuel.recharge);
+    const lowestTierCost = lowestCostByCap.get(fuel.cap) ?? Infinity;
+    lowestCostByCap.set(fuel.cap, Math.min(cost, lowestTierCost));
+    return { cost, fillCost: unitsToFill * price };
   });
-  const bestRatio = Math.max(...ratios);
+  const knownCosts = costs.filter((cost) => cost !== null);
 
   fuels.forEach((fuel, index) => {
     const row = rows[index];
-    const ratio = ratios[index];
+    const priceComparison = costs[index];
     syncMarketPriceInput(row.querySelector("input"), fuel.id);
-    row.querySelector("[data-fuel-ratio]").textContent = ratio ? breedingRatioFormatter.format(ratio) : "–";
-    row.querySelector(".badge").hidden = ratio === 0 || ratio !== bestRatio;
+    row.querySelector("[data-fuel-cost]").textContent = priceComparison === null ? "–" : formatMoney(priceComparison.cost);
+    row.querySelector("[data-fuel-fill-cost]").textContent = priceComparison === null ? "–" : formatMoney(priceComparison.fillCost);
+    row.querySelector("[data-best-tier]").hidden = priceComparison === null || priceComparison.cost !== lowestCostByCap.get(fuel.cap);
   });
 
-  const pricedCount = ratios.filter((ratio) => ratio > 0).length;
   const status = $("#breedingStatus");
-  const coverage = `${pricedCount} / ${fuels.length} prix renseignés`;
+  const coverage = `${knownCosts.length} / ${fuels.length} prix renseignés`;
   if (status.textContent !== coverage) status.textContent = coverage;
 }
 
 function bindBreedingEvents() {
   const category = $("#breedingCategory");
-  category.replaceChildren(...Object.keys(BREEDING_FUELS).map((name) => new Option(name, name)));
+  category.replaceChildren(...Object.keys(BREEDING_FUELS).map((name, index) => {
+    const label = document.createElement("label");
+    const radio = document.createElement("input");
+    radio.type = "radio";
+    radio.name = "breedingCategory";
+    radio.value = name;
+    radio.checked = index === 0;
+    label.append(radio, name);
+    return label;
+  }));
   category.addEventListener("change", renderBreedingTable);
 
   const table = $("#breedingTable");

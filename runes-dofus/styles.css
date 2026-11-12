@@ -618,6 +618,41 @@ h1 {
   margin-bottom: 12px;
 }
 
+.breeding-category {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.breeding-category legend {
+  margin-bottom: 6px;
+  padding: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.breeding-category-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+}
+
+.breeding-category-options label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.breeding-category-options input {
+  margin: 0;
+  accent-color: var(--blue);
+}
+
 .breeding-controls .finder-status {
   margin: 0 0 8px;
   text-align: left;
@@ -633,8 +668,14 @@ h1 {
   white-space: normal;
 }
 
-.breeding-table .badge {
-  margin-inline-start: 8px;
+.breeding-badges {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.breeding-badges .badge {
+  margin-block-start: 3px;
 }
 
 .breeding-table .breeding-gauge-summary {
@@ -831,9 +872,6 @@ tbody tr.is-ocr-updated {
   }
 
   .breeding-table .badge {
-    display: block;
-    width: fit-content;
-    margin: 3px 0 0;
     white-space: normal;
   }
 

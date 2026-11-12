@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Atelier Dofus</title>
-    <link rel="stylesheet" href="styles.css?v=7">
+    <link rel="stylesheet" href="styles.css?v=8">
   </head>
   <body>
     <main class="app-shell">
@@ -408,15 +408,15 @@
         <div class="finder-header">
           <div>
             <h2>Comparer les carburants d’élevage</h2>
-            <p>Saisis les prix unitaires de l’HDV pour comparer la recharge par tranche de 1 000 kamas. Le ratio utilise la recharge complète, avant application du plafond.</p>
+            <p>Saisis les prix unitaires de l’HDV pour comparer le coût de 10 000 points de recharge. Les badges se basent sur ce coût. Le coût du palier compte les unités entières nécessaires pour passer du plafond précédent au plafond du carburant.</p>
           </div>
           <a href="https://dofusdb.fr/fr/database/items?types=326&amp;sortBy=-id" target="_blank" rel="noreferrer">DofusDB</a>
         </div>
         <div class="breeding-controls">
-          <label class="field">
-            <span>Catégorie</span>
-            <select id="breedingCategory"></select>
-          </label>
+          <fieldset class="breeding-category">
+            <legend>Catégorie</legend>
+            <div id="breedingCategory" class="breeding-category-options"></div>
+          </fieldset>
           <p id="breedingStatus" class="finder-status" role="status"></p>
         </div>
         <div class="item-table-wrap" role="region" aria-label="Comparaison des carburants d’élevage" tabindex="0">
@@ -425,8 +425,9 @@
               <th scope="col">Carburant</th>
               <th scope="col" class="breeding-gauge">Recharge (pts)</th>
               <th scope="col" class="breeding-gauge">Plafond de jauge (pts)</th>
-              <th scope="col">Prix HDV (k/u)</th>
-              <th scope="col">Pts / 1 000 k</th>
+              <th scope="col">Prix HDV ×1 (kamas)</th>
+              <th scope="col">Kamas / 10 000 pts</th>
+              <th scope="col">Coût du palier<br>(kamas)</th>
             </tr></thead>
             <tbody id="breedingTable"></tbody>
           </table>
@@ -446,7 +447,7 @@
     <script src="pricing.js?v=2"></script>
     <script src="market.js?v=7"></script>
     <script src="breeding-data.js"></script>
-    <script src="breeding.js"></script>
-    <script src="app.js?v=10"></script>
+    <script src="breeding.js?v=3"></script>
+    <script src="app.js?v=11"></script>
   </body>
 </html>

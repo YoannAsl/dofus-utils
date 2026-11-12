@@ -519,7 +519,8 @@ function renderOcrPanel() {
   $("#ocrDismissBtn").hidden = !state.ocr.pending || state.ocr.loading;
   const selected = getOcrTarget();
   const isRune = runeById.has(state.ocr.targetId);
-  const detectedPrice = isRune ? getOcrApplyPrice(result) : getOcrMarketPrice(result);
+  const isFuel = isBreedingFuel(state.ocr.targetId);
+  const detectedPrice = isRune ? getOcrApplyPrice(result) : getOcrItemPrice(result, state.ocr.targetId);
   const price = isRune ? detectedPrice : parsePrice($("#ocrPriceInput").value);
   $("#ocrTargetSelect").value = state.ocr.targetId;
   $("#ocrPriceField").hidden = isRune;
@@ -539,12 +540,13 @@ function renderOcrPanel() {
 
   if (detectedPrice) {
     $("#ocrDetectedPrice").textContent = `${formatMarketPrice(detectedPrice)} k/u`;
-    $("#ocrPriceMeta").textContent = !isRune && !getOcrUnitPrice(result)
-      ? "Prix moyen affiché par le jeu."
-      : getOcrPriceMeta(result);
+    if (isFuel) $("#ocrPriceMeta").textContent = "Prix du lot ×1.";
+    else if (!isRune && !getOcrUnitPrice(result)) $("#ocrPriceMeta").textContent = "Prix moyen affiché par le jeu.";
+    else $("#ocrPriceMeta").textContent = getOcrPriceMeta(result);
   } else {
     $("#ocrDetectedPrice").textContent = "-";
-    $("#ocrPriceMeta").textContent = isRune ? "Aucun lot lisible." : "Saisis le prix visible sur la capture.";
+    if (isFuel) $("#ocrPriceMeta").textContent = "Lot ×1 introuvable. Saisis le prix d’un exemplaire.";
+    else $("#ocrPriceMeta").textContent = isRune ? "Aucun lot lisible." : "Saisis le prix visible sur la capture.";
   }
 
   $("#ocrLots").innerHTML = renderOcrLots(result);
@@ -553,6 +555,24 @@ function renderOcrPanel() {
 function getOcrTarget() {
   return runeById.get(state.ocr.targetId)
     || state.ocr.items.find((item) => String(item.id) === state.ocr.targetId);
+}
+
+function isBreedingFuel(id) {
+  return Object.values(BREEDING_FUELS).some((fuels) => fuels.some((fuel) => fuel.id === Number(id)));
+}
+
+function getOcrItemPrice(result, id) {
+  if (!isBreedingFuel(id)) return getOcrMarketPrice(result);
+  const singleLot = result?.lots?.find((lot) => Number(lot.quantity) === 1);
+  return parsePrice(singleLot?.total_price);
+}
+
+function changeOcrTarget(id) {
+  if (isBreedingFuel(id) !== isBreedingFuel(state.ocr.targetId)) {
+    $("#ocrPriceInput").value = getOcrItemPrice(state.ocr.result, id) ?? "";
+  }
+  state.ocr.targetId = id;
+  renderOcrPanel();
 }
 
 function getOcrDetectedMeta(result, selected) {
@@ -610,9 +630,8 @@ function applySelectedOcrPrice() {
 function selectMarketOcrTarget(item) {
   if (!state.ocr.result || state.ocr.loading) return;
   state.ocr.items = [item, ...state.ocr.items.filter((entry) => entry.id !== item.id)];
-  state.ocr.targetId = String(item.id);
   renderOcrControls();
-  renderOcrPanel();
+  changeOcrTarget(String(item.id));
   $("#ocrPanel").open = true;
   $("#ocrTargetSelect").focus();
 }
@@ -678,7 +697,7 @@ async function processOcrImage(file) {
     const target = matchedRune || (matchedItems.length === 1 ? matchedItems[0] : null);
     state.ocr.targetId = target ? String(target.id) : "";
     state.ocr.status = target ? "Capture analysée." : "Choisis l’objet cible.";
-    const marketPrice = getOcrMarketPrice(result);
+    const marketPrice = getOcrItemPrice(result, state.ocr.targetId);
     $("#ocrPriceInput").value = marketPrice ?? "";
     renderOcrControls();
 
@@ -1416,8 +1435,7 @@ function bindEvents() {
     event.target.value = "";
   });
   $("#ocrTargetSelect").addEventListener("change", (event) => {
-    state.ocr.targetId = event.target.value;
-    renderOcrPanel();
+    changeOcrTarget(event.target.value);
   });
   $("#ocrPriceInput").addEventListener("input", renderOcrPanel);
   $("#ocrPriceInput").addEventListener("change", (event) => {
