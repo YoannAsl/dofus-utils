@@ -1,6 +1,3 @@
-const STORAGE_KEY = "dofus-rune-prices-v1";
-const ITEM_PRICE_STORAGE_KEY = "dofus-fm-item-prices-v1";
-const EKLAME_PRICE_STORAGE_KEY = "dofus-eklame-prices-v1";
 const OCR_API_PATH = "/api/ocr";
 const OCR_HEALTH_PATH = "/api/health";
 const OCR_CAPTURES_PATH = "/api/captures";
@@ -62,9 +59,6 @@ const EFFECTS = {
 };
 
 const state = {
-  prices: loadPrices(),
-  itemPrices: loadItemPrices(),
-  eklamePrices: loadEklamePrices(),
   eklameTargetId: "31520",
   search: "",
   family: "all",
@@ -98,7 +92,6 @@ const $ = (selector) => document.querySelector(selector);
 const formatter = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 2 });
 const moneyFormatter = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 });
 const XP_RATIO_DISPLAY_SCALE = 1000;
-const XP_TARGET_DENSITY = 1000;
 const DOFUSDB_API_BASE = "https://api.dofusdb.fr";
 const ITEM_PAGE_SIZE = 50;
 const ITEM_RESULT_LIMIT = 40;
@@ -126,11 +119,13 @@ const xpRunes = runes
   .sort((a, b) => a.name.localeCompare(b.name, "fr"));
 const familyMap = buildFamilyMap(runes);
 const runeById = new Map(runes.map((rune) => [String(rune.id), rune]));
+const priceStore = createPriceStore(runeById, EKLAMES);
 const itemTypeCache = new Map();
 let itemSearchToken = 0;
 let activeRuneResultIndex = -1;
 let ocrRequestToken = 0;
 let deferredCaptureId = null;
+let copyStatusTimer;
 
 state.itemFinder.runeId = getDefaultItemRuneId();
 
@@ -177,133 +172,28 @@ function getDefaultItemRuneId() {
   return String((paSo || firstXpRune || runes[0]).id);
 }
 
-function loadPrices() {
-  return loadStoredMap(STORAGE_KEY);
+function showPriceSaved(group) {
+  const time = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  if (!group || group === "prices") $("#saveStatus").textContent = "Sauvegardé localement à " + time;
+  if (!group || group === "eklamePrices") $("#eklameSaveStatus").textContent = "Sauvegarde locale a " + time;
 }
 
-function loadItemPrices() {
-  return loadStoredMap(ITEM_PRICE_STORAGE_KEY);
-}
-
-function loadEklamePrices() {
-  return loadStoredMap(EKLAME_PRICE_STORAGE_KEY);
-}
-
-function loadStoredMap(key) {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : {};
-  } catch {
-    return {};
-  }
-}
-
-function savePrices() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state.prices));
-  $("#saveStatus").textContent = "Sauvegardé localement à " + new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
-}
-
-function saveItemPrices() {
-  localStorage.setItem(ITEM_PRICE_STORAGE_KEY, JSON.stringify(state.itemPrices));
-}
-
-function saveEklamePrices() {
-  localStorage.setItem(EKLAME_PRICE_STORAGE_KEY, JSON.stringify(state.eklamePrices));
-  $("#eklameSaveStatus").textContent = "Sauvegarde locale a " + new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+function updatePrice(group, id, price) {
+  priceStore.set(group, id, price);
+  showPriceSaved(group);
+  renderPriceViews(group, id);
 }
 
 function priceOf(rune) {
-  const price = Number(state.prices[rune.id]);
-  return Number.isFinite(price) && price > 0 ? price : null;
+  return priceStore.get("prices", rune.id);
 }
 
 function eklamePriceOf(eklame) {
-  const price = Number(state.eklamePrices[eklame.id]);
-  return Number.isFinite(price) && price > 0 ? price : null;
-}
-
-function parsePrice(value) {
-  const parsed = Number(String(value).replace(/\s/g, "").replace(",", "."));
-  if (!Number.isFinite(parsed) || parsed <= 0) return null;
-  return Math.round(parsed);
+  return priceStore.get("eklamePrices", eklame.id);
 }
 
 function getAcquisition(rune) {
-  const directPrice = priceOf(rune);
-  const options = [];
-  const group = familyMap.get(rune.baseName);
-
-  if (directPrice) {
-    options.push({
-      kind: "buy",
-      cost: directPrice,
-      label: "Acheter HDV",
-      detail: "Prix direct renseigné",
-    });
-  }
-
-  if (group && rune.tierRank >= 2) {
-    const lower = group.get(rune.tierRank - 1);
-    const lowerPrice = lower ? priceOf(lower) : null;
-    if (lower && lowerPrice) {
-      options.push({
-        kind: "craft",
-        cost: lowerPrice * 3,
-        label: `Crafter via 3 ${lower.name}`,
-        detail: `3 × ${formatMoney(lowerPrice)} kamas`,
-      });
-    }
-  }
-
-  if (group && rune.tierRank === 3) {
-    const simple = group.get(1);
-    const simplePrice = simple ? priceOf(simple) : null;
-    if (simple && simplePrice) {
-      options.push({
-        kind: "craft",
-        cost: simplePrice * 9,
-        label: `Crafter via 9 ${simple.name}`,
-        detail: `9 × ${formatMoney(simplePrice)} kamas`,
-      });
-    }
-  }
-
-  options.sort((a, b) => a.cost - b.cost);
-  const best = options[0] || null;
-  const craftOptions = options.filter((option) => option.kind === "craft");
-  const bestCraft = craftOptions[0] || null;
-  const saving = directPrice && bestCraft ? directPrice - bestCraft.cost : null;
-  const xpDirect = directPrice && rune.density > 0 ? rune.density / directPrice : null;
-  const xpOptimal = best && rune.density > 0 ? rune.density / best.cost : null;
-
-  let decision = "missing";
-  let badge = "Prix requis";
-  if (rune.density <= 0) {
-    decision = "neutral";
-    badge = "Hors XP";
-  } else if (best && best.kind === "craft" && directPrice && best.cost < directPrice) {
-    decision = "craft";
-    badge = "Crafter";
-  } else if (best && best.kind === "craft" && !directPrice) {
-    decision = "craft";
-    badge = "Craft possible";
-  } else if (best && best.kind === "buy") {
-    decision = "buy";
-    badge = "Acheter";
-  }
-
-  return {
-    directPrice,
-    options,
-    best,
-    bestCraft,
-    saving,
-    profit: saving && saving > 0 ? saving : 0,
-    xpDirect,
-    xpOptimal,
-    decision,
-    badge,
-  };
+  return calculateRuneAcquisition(rune, familyMap.get(rune.baseName), priceOf);
 }
 
 function getRows() {
@@ -545,7 +435,7 @@ function renderTable(filtered, bestXp) {
               inputmode="numeric"
               data-id="${rune.id}"
               aria-label="Prix HDV ${escapeAttr(rune.name)}"
-              value="${escapeAttr(state.prices[rune.id] || "")}"
+              value="${escapeAttr(acquisition.directPrice ?? "")}"
               placeholder="—"
             >
           </td>
@@ -564,24 +454,41 @@ function renderTable(filtered, bestXp) {
     .join("");
 }
 
-function render() {
+function renderRunes() {
+  const { rows, filtered, bestXp } = getRows();
+  renderSummary(rows, bestXp);
+  renderTable(filtered, bestXp);
+}
+
+function renderPriceViews(group, id) {
   const active = document.activeElement;
   const activeSelector = getActiveInputSelector(active);
   const activePosition = active && typeof active.selectionStart === "number" ? active.selectionStart : null;
-  const { rows, filtered, bestXp } = getRows();
-  renderSummary(rows, bestXp);
-  renderEklameTool();
-  renderOcrPanel();
-  renderTable(filtered, bestXp);
-  renderItemFinder();
-  renderMarketPrices();
-  if (activeSelector) {
+
+  if (!group || group === "prices") renderRunes();
+  if (!group || group === "eklamePrices") renderEklameTool();
+  if (!group || itemFinderUsesPrice(group, id)) renderItemFinder();
+  if (!group || priceStore.groupForItem(id) === group) renderMarketPrices(id);
+
+  if (activeSelector && !active.isConnected) {
     const next = document.querySelector(activeSelector);
     if (next) {
       next.focus();
       if (activePosition !== null) next.setSelectionRange(activePosition, activePosition);
     }
   }
+}
+
+function itemFinderUsesPrice(group, id) {
+  if (group === "itemPrices") {
+    return state.itemFinder.candidates.some((candidate) => String(candidate.id) === String(id));
+  }
+  if (group === "prices") {
+    const selected = getSelectedItemRune();
+    const rune = runeById.get(String(id));
+    return rune?.baseName === selected.baseName && rune.tierRank <= selected.tierRank;
+  }
+  return false;
 }
 
 function getActiveInputSelector(active) {
@@ -612,7 +519,7 @@ function renderOcrPanel() {
   const selected = getOcrTarget();
   const isRune = runeById.has(state.ocr.targetId);
   const detectedPrice = isRune ? getOcrApplyPrice(result) : getOcrMarketPrice(result);
-  const price = isRune ? detectedPrice : parseMarketPrice($("#ocrPriceInput").value);
+  const price = isRune ? detectedPrice : parsePrice($("#ocrPriceInput").value);
   $("#ocrTargetSelect").value = state.ocr.targetId;
   $("#ocrPriceField").hidden = isRune;
   $("#ocrApplyBtn").disabled = state.ocr.loading || !result || !price || !selected;
@@ -666,41 +573,6 @@ function renderOcrLots(result) {
     .join(" · ");
 }
 
-function getOcrBestLot(result) {
-  return result && result.best_lot ? result.best_lot : null;
-}
-
-function getOcrPracticalAverage(result) {
-  const unitPrice = Number(result?.practical_average_unit_price);
-  if (!Number.isFinite(unitPrice) || unitPrice <= 0) return null;
-  return unitPrice;
-}
-
-function getOcrWeightedAverage(result) {
-  const unitPrice = Number(result?.weighted_average_unit_price);
-  if (!Number.isFinite(unitPrice) || unitPrice <= 0) return null;
-  return unitPrice;
-}
-
-function getOcrUnitPrice(result) {
-  const unitPrice =
-    getOcrPracticalAverage(result) ??
-    getOcrWeightedAverage(result) ??
-    Number(getOcrBestLot(result)?.unit_price);
-  return Number.isFinite(unitPrice) && unitPrice > 0 ? unitPrice : null;
-}
-
-function getOcrApplyPrice(result) {
-  const unitPrice = getOcrUnitPrice(result);
-  return unitPrice === null ? null : Math.max(1, Math.round(unitPrice));
-}
-
-function getOcrMarketPrice(result) {
-  const unitPrice = getOcrUnitPrice(result);
-  if (unitPrice !== null) return Math.round(unitPrice * 1000) / 1000;
-  return parseMarketPrice(result?.displayed_average_price);
-}
-
 function getOcrPriceMeta(result) {
   const practicalAverage = getOcrPracticalAverage(result);
   if (practicalAverage) {
@@ -722,9 +594,7 @@ function getOcrPriceMeta(result) {
 
 function formatOcrUnitPrice(value) {
   const unitPrice = Number(value);
-  if (!Number.isFinite(unitPrice)) return "-";
-  if (Number.isInteger(unitPrice)) return formatMoney(unitPrice);
-  return formatter.format(round2(unitPrice));
+  return Number.isFinite(unitPrice) ? formatMoney(unitPrice) : "-";
 }
 
 function applySelectedOcrPrice() {
@@ -732,7 +602,7 @@ function applySelectedOcrPrice() {
   if (state.ocr.loading || !target || !state.ocr.result) return;
   const price = runeById.has(state.ocr.targetId)
     ? getOcrApplyPrice(state.ocr.result)
-    : parseMarketPrice($("#ocrPriceInput").value);
+    : parsePrice($("#ocrPriceInput").value);
   if (price) applyOcrPrice(target, price);
 }
 
@@ -748,12 +618,15 @@ function selectMarketOcrTarget(item) {
 
 function applyOcrPrice(item, price) {
   const id = String(item.id);
-  saveMarketPrice(id, price);
+  const group = priceStore.groupForItem(id);
+  priceStore.set(group, id, price);
   state.ocr.pending = false;
   acknowledgeOcrCapture();
   if (runeById.has(id)) state.ocr.updatedRuneId = id;
   state.ocr.status = `${marketItemName(item)} · ${formatMarketPrice(price)} k/u enregistré`;
-  render();
+  showPriceSaved(group);
+  renderPriceViews(group, id);
+  renderOcrPanel();
 }
 
 async function processOcrImage(file) {
@@ -778,7 +651,7 @@ async function processOcrImage(file) {
   $("#ocrPriceInput").value = "";
   state.ocr.previewUrl = URL.createObjectURL(file);
   renderOcrPanel();
-  renderMarketPrices();
+  renderMarketOcrTarget();
 
   try {
     if (window.location.protocol === "file:") {
@@ -823,7 +696,7 @@ async function processOcrImage(file) {
     if (token === ocrRequestToken) {
       state.ocr.loading = false;
       renderOcrPanel();
-      renderMarketPrices();
+      renderMarketOcrTarget();
     }
   }
   return true;
@@ -931,32 +804,9 @@ function getSelectedEklameTarget() {
   return EKLAMES.find((eklame) => eklame.id === state.eklameTargetId) || EKLAMES[2];
 }
 
-function getEklameRows(target = getSelectedEklameTarget()) {
-  const targetIndex = EKLAMES.findIndex((eklame) => eklame.id === target.id);
-
-  return EKLAMES.map((eklame, index) => {
-    const directPrice = eklamePriceOf(eklame);
-    const canOpenToTarget = index >= targetIndex;
-    const targetQuantity = canOpenToTarget ? eklame.factor / target.factor : null;
-    const costPerTarget = directPrice && targetQuantity ? directPrice / targetQuantity : null;
-    const action = !canOpenToTarget ? "Trop bas" : index === targetIndex ? "Acheter" : "Ouvrir";
-    const decision = !canOpenToTarget ? "neutral" : costPerTarget ? (index === targetIndex ? "buy" : "craft") : "missing";
-
-    return {
-      eklame,
-      directPrice,
-      canOpenToTarget,
-      targetQuantity,
-      costPerTarget,
-      action,
-      decision,
-    };
-  });
-}
-
 function renderEklameTool() {
   const target = getSelectedEklameTarget();
-  const rows = getEklameRows(target);
+  const rows = calculateEklameRows(EKLAMES, target, eklamePriceOf);
   const pricedRows = rows.filter((row) => row.directPrice);
   const options = rows
     .filter((row) => row.costPerTarget)
@@ -1009,7 +859,7 @@ function renderEklameTool() {
               inputmode="numeric"
               data-id="${eklame.id}"
               aria-label="Prix HDV ${escapeAttr(eklame.name)}"
-              value="${escapeAttr(state.eklamePrices[eklame.id] || "")}"
+              value="${escapeAttr(row.directPrice ?? "")}"
               placeholder="0"
             >
           </td>
@@ -1112,14 +962,14 @@ function renderItemTable(visible, rune, acquisition) {
   }
 
   if (!visible.length) {
-    tbody.innerHTML = `<tr><td class="empty-state" colspan="6">Aucun item ne correspond aux filtres de niveau ou de recherche.</td></tr>`;
+    tbody.innerHTML = `<tr><td class="empty-state" colspan="6">Aucun item ne correspond aux filtres.</td></tr>`;
     return;
   }
 
   tbody.innerHTML = visible
     .slice(0, ITEM_RESULT_LIMIT)
     .map(({ candidate, economy }) => {
-      const itemPrice = state.itemPrices[candidate.id] || "";
+      const itemPrice = economy.itemPrice ?? "";
       const costLabel = economy.costPerDensity ? `${formatMoney(economy.costPerDensity)} k` : "-";
       const costMeta = getItemCostMeta(economy);
       return `
@@ -1128,7 +978,7 @@ function renderItemTable(visible, rune, acquisition) {
             <div class="rune-cell item-cell">
               <img class="item-icon" src="${escapeAttr(getItemImage(candidate.item))}" alt="" loading="lazy">
               <span>
-                <span class="rune-name">${escapeHtml(candidate.name)}</span>
+                ${copyNameButton(candidate.name)}
                 <span class="rune-meta">${escapeHtml(candidate.typeName)} · niv. ${candidate.level}</span>
               </span>
             </div>
@@ -1164,17 +1014,19 @@ function renderItemTable(visible, rune, acquisition) {
 
 function getVisibleItemCandidates(rune, acquisition) {
   const query = normalizeText(state.itemFinder.search);
+  const typeId = $("#itemTypeSelect").value;
   const minLevel = parseLevelFilter(state.itemFinder.minLevel);
   const maxLevel = parseLevelFilter(state.itemFinder.maxLevel);
 
   return state.itemFinder.candidates
     .filter((candidate) => {
+      if (typeId && String(candidate.item.typeId) !== typeId) return false;
       if (minLevel !== null && candidate.level < minLevel) return false;
       if (maxLevel !== null && candidate.level > maxLevel) return false;
       if (!query) return true;
       return normalizeText(candidate.name).includes(query) || normalizeText(candidate.typeName).includes(query);
     })
-    .map((candidate) => ({ candidate, economy: getItemCandidateEconomy(candidate, acquisition) }))
+    .map((candidate) => ({ candidate, economy: calculateItemEconomy(candidate, acquisition, itemPriceOf(candidate.id)) }))
     .sort(sortItemCandidateRows);
 }
 
@@ -1200,20 +1052,6 @@ function sortByItemPotential(a, b) {
   );
 }
 
-function getItemCandidateEconomy(candidate, acquisition) {
-  const itemPrice = itemPriceOf(candidate.id);
-  const runeCost = acquisition.best ? candidate.runeUses * acquisition.best.cost : null;
-  const totalCost = itemPrice ? itemPrice + (runeCost || 0) : null;
-  const costPerDensity = totalCost && candidate.potentialDensity > 0 ? (totalCost / candidate.potentialDensity) * XP_TARGET_DENSITY : null;
-
-  return {
-    itemPrice,
-    runeCost,
-    totalCost,
-    costPerDensity,
-  };
-}
-
 function getItemCostMeta(economy) {
   if (!economy.itemPrice) return "Prix item requis";
   if (!economy.runeCost) return "Hors coût runes";
@@ -1231,8 +1069,7 @@ function getItemDetail(candidate, rune, acquisition, economy) {
 }
 
 function itemPriceOf(itemId) {
-  const price = Number(state.itemPrices[itemId]);
-  return Number.isFinite(price) && price > 0 ? price : null;
+  return priceStore.get("itemPrices", itemId);
 }
 
 function parseLevelFilter(value) {
@@ -1243,6 +1080,7 @@ function parseLevelFilter(value) {
 
 function clearItemSearch(status = "Relance une recherche avec les nouveaux critères.") {
   state.itemFinder.candidates = [];
+  setItemTypeOptions($("#itemTypeSelect"), []);
   state.itemFinder.searched = false;
   state.itemFinder.loading = false;
   state.itemFinder.status = status;
@@ -1255,6 +1093,7 @@ async function searchItemCandidates() {
   const token = ++itemSearchToken;
 
   state.itemFinder.loading = true;
+  $("#itemTypeSelect").disabled = true;
   state.itemFinder.searched = true;
   state.itemFinder.candidates = [];
   state.itemFinder.status = `Chargement ${job.label}...`;
@@ -1284,6 +1123,8 @@ async function searchItemCandidates() {
   } finally {
     if (token === itemSearchToken) {
       state.itemFinder.loading = false;
+      const types = new Map(state.itemFinder.candidates.map(({ item, typeName }) => [item.typeId, typeName]));
+      setItemTypeOptions($("#itemTypeSelect"), [...types]);
       renderItemFinder();
     }
   }
@@ -1406,7 +1247,8 @@ function detailText(rune, acquisition) {
     }
     return "Pas de tier inférieur disponible ou prix inférieur manquant.";
   }
-  return `${acquisition.best.label}: ${acquisition.best.detail}.`;
+  const { label, quantity, unitPrice } = acquisition.best;
+  return `${label}: ${quantity} × ${formatMoney(unitPrice)} kamas.`;
 }
 
 function formatGain(value) {
@@ -1431,16 +1273,6 @@ function formatMoney(value) {
   return moneyFormatter.format(Math.round(value));
 }
 
-function getTargetDensityCost(rune, acquisition) {
-  if (!acquisition.best || rune.density <= 0) return null;
-  const quantity = Math.ceil(XP_TARGET_DENSITY / rune.density);
-  return {
-    quantity,
-    cost: quantity * acquisition.best.cost,
-    density: quantity * rune.density,
-  };
-}
-
 function formatQuantity(value) {
   return moneyFormatter.format(value);
 }
@@ -1458,9 +1290,7 @@ function exportPrices() {
   const payload = {
     exportedAt: new Date().toISOString(),
     source: "Atelier Dofus",
-    prices: state.prices,
-    itemPrices: state.itemPrices,
-    eklamePrices: state.eklamePrices,
+    ...priceStore.snapshot(),
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
@@ -1476,28 +1306,14 @@ function importPrices(file) {
   reader.onload = () => {
     try {
       const payload = JSON.parse(String(reader.result));
-      state.prices = { ...state.prices, ...parsePriceMap(payload.prices || payload) };
-      state.itemPrices = { ...state.itemPrices, ...parsePriceMap(payload.itemPrices) };
-      state.eklamePrices = { ...state.eklamePrices, ...parsePriceMap(payload.eklamePrices) };
-      savePrices();
-      saveItemPrices();
-      saveEklamePrices();
-      render();
+      priceStore.merge(payload);
+      showPriceSaved();
+      renderPriceViews();
     } catch {
       alert("Import impossible: le fichier JSON n'est pas valide.");
     }
   };
   reader.readAsText(file);
-}
-
-function parsePriceMap(values) {
-  const next = {};
-  for (const [id, value] of Object.entries(values || {})) {
-    if (!/^\d+$/.test(id)) continue;
-    const parsed = parseMarketPrice(value);
-    if (parsed) next[id] = parsed;
-  }
-  return next;
 }
 
 function escapeHtml(value) {
@@ -1513,6 +1329,33 @@ function escapeAttr(value) {
   return escapeHtml(value);
 }
 
+function setItemTypeOptions(select, types) {
+  const selected = select.value;
+  types.sort((a, b) => a[1].localeCompare(b[1], "fr"));
+  select.replaceChildren(new Option("Tous les types", ""), ...types.map(([id, name]) => new Option(name, id)));
+  select.value = types.some(([id]) => String(id) === selected) ? selected : "";
+  select.disabled = !types.length;
+}
+
+function copyNameButton(name) {
+  return `<button type="button" class="copy-name" title="Copier le nom" data-copy-name="${escapeAttr(name)}"
+    aria-label="${escapeAttr(`Copier ${name}`)}">${escapeHtml(name)}</button>`;
+}
+
+async function copyItemName(name) {
+  const status = $("#copyStatus");
+  clearTimeout(copyStatusTimer);
+  status.textContent = "";
+  try {
+    await navigator.clipboard.writeText(name);
+    status.textContent = `Nom copié · ${name}`;
+  } catch {
+    status.textContent = "Impossible de copier le nom.";
+  }
+  clearTimeout(copyStatusTimer);
+  copyStatusTimer = setTimeout(() => { status.textContent = ""; }, 2500);
+}
+
 function selectTool(selectedTab) {
   for (const tab of document.querySelectorAll("#toolTabs [role='tab']")) {
     const selected = tab === selectedTab;
@@ -1523,6 +1366,10 @@ function selectTool(selectedTab) {
 }
 
 function bindEvents() {
+  document.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-copy-name]");
+    if (button) copyItemName(button.dataset.copyName);
+  });
   const toolTabs = $("#toolTabs");
   toolTabs.addEventListener("click", (event) => {
     const tab = event.target.closest("[role='tab']");
@@ -1545,19 +1392,19 @@ function bindEvents() {
   });
   $("#searchInput").addEventListener("input", (event) => {
     state.search = event.target.value;
-    render();
+    renderRunes();
   });
   $("#familyFilter").addEventListener("change", (event) => {
     state.family = event.target.value;
-    render();
+    renderRunes();
   });
   $("#decisionFilter").addEventListener("change", (event) => {
     state.decision = event.target.value;
-    render();
+    renderRunes();
   });
   $("#sortSelect").addEventListener("change", (event) => {
     state.sort = event.target.value;
-    render();
+    renderRunes();
   });
   $("#ocrChooseBtn").addEventListener("click", () => $("#ocrFileInput").click());
   $("#ocrFileInput").addEventListener("change", (event) => {
@@ -1570,6 +1417,10 @@ function bindEvents() {
     renderOcrPanel();
   });
   $("#ocrPriceInput").addEventListener("input", renderOcrPanel);
+  $("#ocrPriceInput").addEventListener("change", (event) => {
+    const price = parsePrice(event.target.value);
+    if (price !== null) event.target.value = price;
+  });
   $("#ocrApplyBtn").addEventListener("click", applySelectedOcrPrice);
   $("#ocrDismissBtn").addEventListener("click", () => {
     state.ocr.pending = false;
@@ -1581,7 +1432,7 @@ function bindEvents() {
     state.ocr.previewUrl = null;
     state.ocr.status = "Capture ignorée.";
     renderOcrPanel();
-    renderMarketPrices();
+    renderMarketOcrTarget();
     $("#ocrChooseBtn").focus();
   });
   $("#ocrDropZone").addEventListener("dragenter", (event) => {
@@ -1650,6 +1501,7 @@ function bindEvents() {
     clearItemSearch("Métier changé.");
     renderItemFinder();
   });
+  $("#itemTypeSelect").addEventListener("change", renderItemFinder);
   $("#itemMinLevel").addEventListener("input", (event) => {
     state.itemFinder.minLevel = event.target.value;
     renderItemFinder();
@@ -1669,27 +1521,11 @@ function bindEvents() {
   $("#findItemsBtn").addEventListener("click", searchItemCandidates);
   $("#runeTable").addEventListener("input", (event) => {
     if (!event.target.matches(".price-input")) return;
-    const id = event.target.dataset.id;
-    const parsed = parsePrice(event.target.value);
-    if (parsed) {
-      state.prices[id] = parsed;
-    } else {
-      delete state.prices[id];
-    }
-    savePrices();
-    render();
+    updatePrice("prices", event.target.dataset.id, parsePrice(event.target.value));
   });
   $("#itemTable").addEventListener("input", (event) => {
     if (!event.target.matches(".item-price-input")) return;
-    const id = event.target.dataset.id;
-    const parsed = parsePrice(event.target.value);
-    if (parsed) {
-      state.itemPrices[id] = parsed;
-    } else {
-      delete state.itemPrices[id];
-    }
-    saveItemPrices();
-    render();
+    updatePrice("itemPrices", event.target.dataset.id, parsePrice(event.target.value));
   });
   $("#eklameTargetSelect").addEventListener("change", (event) => {
     state.eklameTargetId = event.target.value;
@@ -1697,15 +1533,7 @@ function bindEvents() {
   });
   $("#eklameTable").addEventListener("input", (event) => {
     if (!event.target.matches(".eklame-price-input")) return;
-    const id = event.target.dataset.id;
-    const parsed = parsePrice(event.target.value);
-    if (parsed) {
-      state.eklamePrices[id] = parsed;
-    } else {
-      delete state.eklamePrices[id];
-    }
-    saveEklamePrices();
-    render();
+    updatePrice("eklamePrices", event.target.dataset.id, parsePrice(event.target.value));
   });
   $("#exportBtn").addEventListener("click", exportPrices);
   $("#importBtn").addEventListener("click", () => $("#importFile").click());
@@ -1716,13 +1544,9 @@ function bindEvents() {
   });
   $("#resetBtn").addEventListener("click", () => {
     if (!confirm("Effacer tous les prix saisis ?")) return;
-    state.prices = {};
-    state.itemPrices = {};
-    state.eklamePrices = {};
-    savePrices();
-    saveItemPrices();
-    saveEklamePrices();
-    render();
+    priceStore.clear();
+    showPriceSaved();
+    renderPriceViews();
   });
 }
 
@@ -1731,7 +1555,9 @@ renderItemFinderControls();
 renderOcrControls();
 bindEvents();
 bindMarketEvents();
-render();
+renderPriceViews();
+renderOcrPanel();
+renderMarketOcrTarget();
 searchMarket();
 if (window.location.protocol === "http:" && ["127.0.0.1", "localhost"].includes(window.location.hostname)) {
   pollOcrCaptures();

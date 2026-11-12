@@ -9,34 +9,10 @@ const market = {
   searchTimer: null,
   itemTypes: null,
 };
-const marketPriceFormatter = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 3 });
 const MARKET_ITEM_FIELDS = ["id", "name.fr", "level", "typeId", "hasRecipe", "img", "iconId"];
 
 function marketPriceOf(id) {
-  const rune = runeById.get(String(id));
-  if (rune) return priceOf(rune);
-  if (EKLAMES.some((eklame) => eklame.id === String(id))) return eklamePriceOf({ id });
-  return itemPriceOf(id);
-}
-
-function parseMarketPrice(value) {
-  const parsed = Number(String(value).replace(/\s/g, "").replace(",", "."));
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
-}
-
-function saveMarketPrice(id, price) {
-  let prices = state.itemPrices;
-  let save = saveItemPrices;
-  if (runeById.has(String(id))) {
-    prices = state.prices;
-    save = savePrices;
-  } else if (EKLAMES.some((eklame) => eklame.id === String(id))) {
-    prices = state.eklamePrices;
-    save = saveEklamePrices;
-  }
-  if (price === null) delete prices[id];
-  else prices[id] = price;
-  save();
+  return priceStore.get(priceStore.groupForItem(id), id);
 }
 
 function marketQuery(path, fields = []) {
@@ -53,7 +29,7 @@ async function fetchMarketData(url) {
 
 async function getMarketItemTypes() {
   if (market.itemTypes) return market.itemTypes;
-  const url = marketQuery("item-types", ["id", "categoryId"]);
+  const url = marketQuery("item-types", ["id", "categoryId", "name.fr"]);
   url.searchParams.set("$sort[id]", "1");
   url.searchParams.set("$limit", MARKET_PAGE_SIZE);
   const types = [];
@@ -101,6 +77,7 @@ async function searchMarket() {
   const token = ++market.searchToken;
   const search = $("#marketSearch").value.trim().slice(0, 120);
   const category = $("#marketCategory").value;
+  const typeSelect = $("#marketType");
   $("#marketStatus").textContent = "Chargement du catalogue…";
   $("#marketRetry").hidden = true;
   $("#marketPages").hidden = true;
@@ -118,14 +95,22 @@ async function searchMarket() {
       const pattern = marketNamePattern(search);
       if (pattern) url.searchParams.set("slug.fr[$regex]", pattern);
     }
-    if (category !== "all") {
-      const types = await getMarketItemTypes();
-      const categories = category === "market" ? [0, 2] : [Number(category)];
-      for (const type of types) {
-        if (categories.includes(type.categoryId)) url.searchParams.append("typeId[$in][]", type.id);
-      }
-    }
+    const types = await getMarketItemTypes().catch((error) => {
+      if (category !== "all") throw error;
+      return [];
+    });
     if (token !== market.searchToken) return;
+    const categories = category === "market" ? [0, 2] : [Number(category)];
+    const categoryTypes = category === "all" ? types : types.filter((type) => categories.includes(type.categoryId));
+    if (typeSelect.dataset.category !== category || typeSelect.disabled) {
+      setItemTypeOptions(typeSelect, categoryTypes.map((type) => [type.id, localizedName(type.name) || `Type ${type.id}`]));
+      typeSelect.dataset.category = category;
+    }
+    if (typeSelect.value) {
+      url.searchParams.set("typeId", typeSelect.value);
+    } else if (category !== "all") {
+      for (const type of categoryTypes) url.searchParams.append("typeId[$in][]", type.id);
+    }
     const { data, total } = await fetchMarketData(url);
     if (token !== market.searchToken) return;
     market.items = data;
@@ -153,21 +138,29 @@ function marketItemIcon(item) {
 }
 
 function renderMarketResults() {
-  $("#marketResults").innerHTML = market.items.map((item) => `
-    <tr>
-      <td><button type="button" class="market-item-button market-item-label" data-market-id="${Number(item.id)}">
-        ${marketItemIcon(item)}
-        <span>${escapeHtml(marketItemName(item))}</span>
-      </button></td>
-      <td>${escapeHtml(localizedName(item.type?.name) || "–")}</td>
-      <td>${escapeHtml(item.level ?? "–")}</td>
-      <td data-market-price="${Number(item.id)}"></td>
-    </tr>`).join("");
+  const typeNames = new Map((market.itemTypes ?? []).map((type) => [type.id, localizedName(type.name)]));
+  $("#marketResults").innerHTML = market.items.map((item) => {
+    const name = marketItemName(item);
+    return `
+      <tr>
+        <td><div class="market-item-label">
+          <button type="button" class="market-item-button market-item-label" data-market-id="${Number(item.id)}">
+            ${marketItemIcon(item)}
+            <span>${escapeHtml(name)}</span>
+          </button>
+          <button type="button" class="icon-button" data-copy-name="${escapeAttr(name)}"
+            aria-label="${escapeAttr(`Copier ${name}`)}">Copier</button>
+        </div></td>
+        <td>${escapeHtml(typeNames.get(item.typeId) || localizedName(item.type?.name) || "–")}</td>
+        <td>${escapeHtml(item.level ?? "–")}</td>
+        <td data-market-price="${Number(item.id)}"></td>
+      </tr>`;
+  }).join("");
   renderMarketPrices();
 }
 
 function formatMarketPrice(value) {
-  return value === null ? "–" : marketPriceFormatter.format(value);
+  return value === null ? "–" : formatMoney(value);
 }
 
 async function openMarketItem(item) {
@@ -177,10 +170,10 @@ async function openMarketItem(item) {
   $("#marketDetail").hidden = false;
   $("#marketRecipeTable").hidden = true;
   $("#marketIngredients").replaceChildren();
-  $("#marketItemName").innerHTML = `${marketItemIcon(item)}<span>${escapeHtml(marketItemName(item))}</span>`;
+  $("#marketItemName").innerHTML = `${marketItemIcon(item)}${copyNameButton(marketItemName(item))}`;
   $("#marketItemPrice").setCustomValidity("");
   $("#marketItemMeta").textContent = [
-    localizedName(item.type?.name),
+    localizedName(item.type?.name || market.itemTypes?.find((type) => type.id === item.typeId)?.name),
     item.level != null ? `Niv. ${item.level}` : "",
     `n°${item.id}`,
   ].filter(Boolean).join(" · ");
@@ -207,10 +200,10 @@ async function openMarketItem(item) {
         <tr>
           <td><div class="market-item-label">
             ${marketItemIcon(ingredient)}
-            <span>${escapeHtml(name)}</span>
+            ${copyNameButton(name)}
           </div></td>
           <td>${formatQuantity(quantity)}</td>
-          <td><input class="market-ingredient-price" data-market-input="${Number(id)}" type="text" inputmode="decimal"
+          <td><input class="market-ingredient-price" data-market-input="${Number(id)}" type="text" inputmode="numeric"
             aria-label="${escapeAttr(`Prix unitaire · ${name}`)}" autocomplete="off"></td>
           <td data-market-subtotal></td>
         </tr>`;
@@ -222,29 +215,31 @@ async function openMarketItem(item) {
   }
 }
 
-function renderMarketPrices() {
-  for (const cell of $("#marketResults").querySelectorAll("[data-market-price]")) {
-    cell.textContent = formatMarketPrice(marketPriceOf(cell.dataset.marketPrice));
-  }
+function renderMarketOcrTarget() {
   $("#marketOcrTarget").hidden = !state.ocr.result || state.ocr.loading;
-  if (!market.selected) return;
-  syncMarketPriceInput($("#marketItemPrice"), market.selected.id);
+}
 
-  let total = 0;
-  let missing = 0;
+function renderMarketPrices(changedId) {
+  const matches = (id) => changedId === undefined || String(id) === String(changedId);
+  for (const cell of $("#marketResults").querySelectorAll("[data-market-price]")) {
+    const id = cell.dataset.marketPrice;
+    if (matches(id)) cell.textContent = formatMarketPrice(marketPriceOf(id));
+  }
+  if (!market.selected) return;
+  if (matches(market.selected.id)) syncMarketPriceInput($("#marketItemPrice"), market.selected.id);
+  if (!market.ingredients.some(({ id }) => matches(id))) return;
+
+  const { subtotals, total, missing } = calculateRecipeCost(market.ingredients, marketPriceOf);
   const rows = $("#marketIngredients").rows;
-  market.ingredients.forEach(({ id, quantity }, index) => {
+  market.ingredients.forEach(({ id }, index) => {
+    if (!matches(id)) return;
     const row = rows[index];
     syncMarketPriceInput(row.querySelector("input"), id);
-    const price = marketPriceOf(id);
-    const subtotal = price === null ? null : price * quantity;
+    const subtotal = subtotals[index];
     row.querySelector("[data-market-subtotal]").textContent = subtotal === null
       ? "Prix manquant"
       : `${formatMarketPrice(subtotal)} k`;
-    total += subtotal ?? 0;
-    if (subtotal === null) missing++;
   });
-  if (!market.ingredients.length) return;
   $("#marketRecipeStatus").textContent = missing
     ? `Coût incomplet · ${missing} prix manquant${missing === 1 ? "" : "s"} · Sous-total connu ${formatMarketPrice(total)} k`
     : `Coût de craft · ${formatMarketPrice(total)} k`;
@@ -253,21 +248,21 @@ function renderMarketPrices() {
 function syncMarketPriceInput(input, id) {
   if (input === document.activeElement) return;
   const price = marketPriceOf(id);
-  if (parseMarketPrice(input.value) !== price || (price === null && input.value)) {
+  if (input.value !== String(price ?? "")) {
     input.value = price ?? "";
     input.setCustomValidity("");
   }
 }
 
 function commitMarketInput(input, id) {
-  const price = parseMarketPrice(input.value);
+  const price = parsePrice(input.value);
   if (price === null && input.value.trim()) {
     input.setCustomValidity("Saisis un prix positif ou vide le champ.");
     input.reportValidity();
     return;
   }
-  saveMarketPrice(id, price);
-  render();
+  updatePrice(priceStore.groupForItem(id), id, price);
+  input.value = price ?? "";
 }
 
 function bindMarketEvents() {
@@ -275,7 +270,11 @@ function bindMarketEvents() {
     if (event.target.matches("img.item-icon")) event.target.hidden = true;
   }, true);
   $("#marketSearch").addEventListener("input", queueMarketSearch);
-  $("#marketCategory").addEventListener("change", queueMarketSearch);
+  $("#marketCategory").addEventListener("change", () => {
+    setItemTypeOptions($("#marketType"), []);
+    queueMarketSearch();
+  });
+  $("#marketType").addEventListener("change", queueMarketSearch);
   $("#marketRetry").addEventListener("click", searchMarket);
   $("#marketPrev").addEventListener("click", () => {
     market.page--;

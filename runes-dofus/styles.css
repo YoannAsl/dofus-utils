@@ -366,7 +366,12 @@ h1 {
 }
 
 .market-controls {
-  grid-template-columns: minmax(0, 2fr) minmax(120px, 1fr) auto;
+  grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr));
+}
+
+.market-controls > button {
+  grid-column: 1 / -1;
+  justify-self: start;
 }
 
 .market-detail {
@@ -411,6 +416,7 @@ h1 {
   flex: none;
 }
 
+.copy-name,
 .market-item-button {
   padding: 2px 0;
   border: 0;
@@ -421,8 +427,24 @@ h1 {
   cursor: pointer;
 }
 
-.market-item-button:hover {
+.copy-name:is(:hover, :focus-visible),
+.market-item-button:is(:hover, :focus-visible) {
   text-decoration: underline;
+}
+
+.copy-status:not(:empty) {
+  position: fixed;
+  z-index: 5;
+  right: 16px;
+  bottom: 16px;
+  max-width: calc(100% - 32px);
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-strong);
+  color: var(--ink);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 12%);
+  pointer-events: none;
 }
 
 .table-hint {
@@ -854,7 +876,7 @@ tbody tr.is-ocr-updated {
   }
 }
 
-@media (max-width: 420px) {
+@media (max-width: 580px) {
   .market-controls {
     grid-template-columns: 1fr;
   }

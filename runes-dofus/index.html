@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Atelier Dofus</title>
-    <link rel="stylesheet" href="styles.css?v=5">
+    <link rel="stylesheet" href="styles.css?v=6">
   </head>
   <body>
     <main class="app-shell">
@@ -82,7 +82,7 @@
               </label>
               <label id="ocrPriceField" class="field" hidden>
                 <span>Prix à enregistrer (k/u)</span>
-                <input id="ocrPriceInput" type="text" inputmode="decimal" autocomplete="off">
+                <input id="ocrPriceInput" type="text" inputmode="numeric" autocomplete="off">
               </label>
               <button id="ocrApplyBtn" type="button" class="icon-button" title="Appliquer le prix OCR" disabled>
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
@@ -99,7 +99,7 @@
         <div class="finder-header">
           <div>
             <h2>Prix HDV et coûts de craft</h2>
-            <p>Recherche un objet, saisis son prix unitaire ou ouvre sa recette.</p>
+            <p>Clique sur un nom pour voir le prix et la recette. Utilise Copier pour copier le nom.</p>
           </div>
           <p id="marketStatus" class="finder-status" role="status"></p>
         </div>
@@ -117,6 +117,12 @@
               <option value="all">Tous les objets</option>
             </select>
           </label>
+          <label class="field">
+            <span>Type d’objet</span>
+            <select id="marketType" disabled>
+              <option value="">Tous les types</option>
+            </select>
+          </label>
           <button id="marketRetry" class="icon-button" type="button" hidden>Réessayer</button>
         </div>
 
@@ -131,7 +137,7 @@
           <div class="market-actions">
             <label class="field">
               <span>Prix HDV (k/u)</span>
-              <input id="marketItemPrice" type="text" inputmode="decimal" autocomplete="off">
+              <input id="marketItemPrice" type="text" inputmode="numeric" autocomplete="off">
             </label>
             <button id="marketOcrTarget" class="icon-button" type="button" hidden>Associer à la capture</button>
           </div>
@@ -267,6 +273,12 @@
             <span>Métier</span>
             <select id="itemJobSelect"></select>
           </label>
+          <label class="field">
+            <span>Type d’objet</span>
+            <select id="itemTypeSelect" disabled>
+              <option value="">Tous les types</option>
+            </select>
+          </label>
           <label class="field compact">
             <span>Niv. min</span>
             <input id="itemMinLevel" type="number" min="1" max="250" inputmode="numeric" placeholder="1">
@@ -397,8 +409,12 @@
       </footer>
     </main>
 
+    <div id="copyStatus" class="copy-status" role="status"></div>
+
     <script src="runes-data.js"></script>
-    <script src="market.js?v=2"></script>
-    <script src="app.js?v=4"></script>
+    <script src="prices.js?v=2"></script>
+    <script src="pricing.js?v=2"></script>
+    <script src="market.js?v=6"></script>
+    <script src="app.js?v=8"></script>
   </body>
 </html>
