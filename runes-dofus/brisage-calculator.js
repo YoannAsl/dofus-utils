@@ -4,6 +4,8 @@ const shatterSim = {
   lines: [],
   exos: [],
   coefficients: {},
+  // Key of the focused line, "" for no focus; null follows the best result until the user picks one.
+  focusKey: null,
   loadToken: 0,
   nextExoKey: 1,
 };
@@ -79,6 +81,7 @@ async function selectShatterItem(summary) {
     shatterSim.item = item;
     shatterSim.lines = buildShatterLines(item);
     shatterSim.exos = [];
+    shatterSim.focusKey = null;
     $("#brisageSimStatus").textContent = shatterSim.lines.length ? "" : "Cet objet n’a aucune caractéristique qui donne des runes.";
     $("#brisageSimItem").innerHTML = `${marketItemIcon(item)}<span>${copyNameButton(marketItemName(item))}
       <span class="rune-meta">Niv. ${escapeHtml(item.level ?? "–")} · n°${Number(item.id)}</span></span>`;
@@ -163,17 +166,10 @@ function readShatterCoefficient() {
   return Number.isFinite(coefficient) && coefficient > 0 ? coefficient : null;
 }
 
-function renderShatterValues() {
+function computeShatter() {
   const item = shatterSim.item;
-  if (!item) return;
   const activeLines = [...shatterSim.lines, ...shatterSim.exos.filter((exo) => exo.rune)];
   const coefficient = readShatterCoefficient();
-  const cost = marketPriceOf(item.id);
-  syncMarketPriceInput($("#brisageSimPrice"), item.id);
-  for (const input of $("#brisageSimTable").querySelectorAll(".brisage-sim-price")) {
-    syncMarketPriceInput(input, input.dataset.id);
-  }
-
   const result = coefficient === null ? null : calculateShatter({
     level: Number(item.level) || 1,
     coefficient,
@@ -186,6 +182,19 @@ function renderShatterValues() {
       price: line.negative ? null : priceOf(line.rune),
     })),
   });
+  return { activeLines, coefficient, result };
+}
+
+function renderShatterValues() {
+  const item = shatterSim.item;
+  if (!item) return;
+  const cost = marketPriceOf(item.id);
+  syncMarketPriceInput($("#brisageSimPrice"), item.id);
+  for (const input of $("#brisageSimTable").querySelectorAll(".brisage-sim-price")) {
+    syncMarketPriceInput(input, input.dataset.id);
+  }
+
+  const { activeLines, coefficient, result } = computeShatter();
   const ranks = new Map((result?.options ?? []).slice(0, 3).map((option, rank) => [option.index, rank + 1]));
   const formatRunes = (value) => (value === null ? "" : formatter.format(value));
   const formatKamas = (value) => (value === null ? "" : `${formatMoney(value)} k`);
@@ -226,6 +235,43 @@ function renderShatterValues() {
   $("#brisageSimBreakEvenMeta").textContent = breakEven === null
     ? "Coefficient minimum pour rentrer dans tes frais."
     : coefficient >= breakEven ? "Le coefficient actuel est rentable." : "Le coefficient actuel n’est pas rentable.";
+  renderShatterFocusOptions(activeLines, result);
+}
+
+// Only regular characteristics can be focused: exos and maluses have no focus result.
+function renderShatterFocusOptions(activeLines, result) {
+  const focusable = activeLines.filter((line, index) => result?.rows[index]?.runesWithFocus != null
+    || (result === null && !line.negative && !shatterSim.exos.includes(line)));
+  if (shatterSim.focusKey !== null && shatterSim.focusKey !== "" && !focusable.some((line) => line.key === shatterSim.focusKey)) {
+    shatterSim.focusKey = null;
+  }
+  const best = result?.best ?? null;
+  const selected = shatterSim.focusKey ?? (best?.index == null ? "" : activeLines[best.index].key);
+  const kamas = (value) => (value == null ? "" : ` · ${formatMoney(value)} k`);
+  $("#brisageSimFocus").innerHTML = [
+    `<option value="">Sans focus${kamas(result?.totalWithoutFocus)}</option>`,
+    ...focusable.map((line) => {
+      const row = result?.rows[activeLines.indexOf(line)];
+      return `<option value="${escapeAttr(line.key)}">Focus ${escapeHtml(line.rune.effect.label)}${kamas(row?.kamasWithFocus)}</option>`;
+    }),
+  ].join("");
+  $("#brisageSimFocus").value = selected;
+}
+
+// Expected rune counts for the chosen focus, rounded to whole runes as the game drops them.
+function shatterRunesForLog() {
+  const { activeLines, result } = computeShatter();
+  if (!result) return [];
+  const focusKey = $("#brisageSimFocus").value;
+  const focusIndex = activeLines.findIndex((line) => line.key === focusKey);
+  const totals = new Map();
+  activeLines.forEach((line, index) => {
+    if (focusIndex !== -1 && index !== focusIndex) return;
+    const count = focusIndex === -1 ? result.rows[index].runesWithoutFocus : result.rows[index].runesWithFocus;
+    const quantity = Math.round(count ?? 0);
+    if (quantity > 0) totals.set(line.rune, (totals.get(line.rune) || 0) + quantity);
+  });
+  return [...totals];
 }
 
 function changeShatterJet(key, value) {
@@ -256,6 +302,11 @@ function recordShatterInLog() {
   if (cost !== null) $("#brisageUnitCost").value = cost;
   const coefficient = readShatterCoefficient();
   if (coefficient !== null) $("#brisageCoefficient").value = String(coefficient).replace(".", ",");
+  const runeRows = shatterRunesForLog();
+  $("#brisageRunes").innerHTML = runeRows.length
+    ? runeRows.map(([rune, quantity]) => brisageRuneRow(rune, quantity)).join("")
+    : brisageRuneRow();
+  $("#brisageErrors").replaceChildren();
   renderBrisagePreview();
   $("#brisageForm").scrollIntoView({ behavior: "smooth", block: "start" });
   $("#brisageRunes .brisage-rune-name")?.focus({ preventScroll: true });
@@ -328,5 +379,8 @@ function bindShatterCalculatorEvents() {
       if (event.key === "Enter") event.target.blur();
     });
   }
+  $("#brisageSimFocus").addEventListener("change", (event) => {
+    shatterSim.focusKey = event.target.value;
+  });
   $("#brisageSimRecord").addEventListener("click", recordShatterInLog);
 }

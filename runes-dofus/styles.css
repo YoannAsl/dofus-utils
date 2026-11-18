@@ -868,7 +868,7 @@ tbody tr.is-ocr-updated {
 
 .brisage-sim-head {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 130px 180px auto;
+  grid-template-columns: minmax(0, 1fr) 130px 180px 220px auto;
   gap: 8px 12px;
   align-items: end;
   margin-top: 16px;
