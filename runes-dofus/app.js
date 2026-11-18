@@ -470,6 +470,7 @@ function renderPriceViews(group, id) {
   if (!group || itemFinderUsesPrice(group, id)) renderItemFinder();
   if (!group || priceStore.groupForItem(id) === group) renderMarketPrices(id);
   if (!group || group === "itemPrices") renderBreedingPrices();
+  if (!group || group === "prices") renderBrisageLog();
 
   if (activeSelector && !active.isConnected) {
     const next = document.querySelector(activeSelector);
@@ -1313,6 +1314,7 @@ function exportPrices() {
     exportedAt: new Date().toISOString(),
     source: "Atelier Dofus",
     ...priceStore.snapshot(),
+    brisages: brisage.entries,
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
@@ -1329,6 +1331,7 @@ function importPrices(file) {
     try {
       const payload = JSON.parse(String(reader.result));
       priceStore.merge(payload);
+      mergeBrisageEntries(payload.brisages);
       showPriceSaved();
       renderPriceViews();
     } catch {
@@ -1581,6 +1584,7 @@ renderOcrControls();
 bindEvents();
 bindMarketEvents();
 bindBreedingEvents();
+bindBrisageEvents();
 renderPriceViews();
 renderOcrPanel();
 renderMarketOcrTarget();

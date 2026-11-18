@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Atelier Dofus</title>
-    <link rel="stylesheet" href="styles.css?v=8">
+    <link rel="stylesheet" href="styles.css?v=9">
   </head>
   <body>
     <main class="app-shell">
@@ -36,6 +36,7 @@
         <button id="itemsTab" type="button" role="tab" aria-selected="false" aria-controls="itemsView" tabindex="-1">Items FM</button>
         <button id="eklamesTab" type="button" role="tab" aria-selected="false" aria-controls="eklamesView" tabindex="-1">Eklames</button>
         <button id="breedingTab" type="button" role="tab" aria-selected="false" aria-controls="breedingView" tabindex="-1">Carburants d’élevage</button>
+        <button id="brisageTab" type="button" role="tab" aria-selected="false" aria-controls="brisageView" tabindex="-1">Brisage</button>
       </div>
 
       <details id="ocrPanel" class="ocr-panel">
@@ -434,6 +435,82 @@
         </div>
       </section>
 
+      <section id="brisageView" class="workspace" role="tabpanel" aria-labelledby="brisageTab" hidden>
+        <div class="finder-header">
+          <div>
+            <h2>Suivi des brisages</h2>
+            <p>Note chaque objet brisé et les runes obtenues. La valeur des runes suit les prix saisis dans Prix des runes.</p>
+          </div>
+        </div>
+
+        <form id="brisageForm" class="market-detail brisage-form" novalidate>
+          <div class="finder-controls brisage-controls">
+            <div class="field brisage-item-field">
+              <label for="brisageItemSearch">Objet brisé</label>
+              <input id="brisageItemSearch" type="search" placeholder="Gelano, Cape Bouffante…" autocomplete="off">
+              <div id="brisageItemResults" class="brisage-item-results" hidden></div>
+              <div id="brisageSelectedItem" class="market-item-label brisage-selected-item"></div>
+            </div>
+            <label class="field compact">
+              <span>Quantité</span>
+              <input id="brisageQuantity" type="number" min="1" step="1" inputmode="numeric" value="1">
+            </label>
+            <label class="field">
+              <span>Coût unitaire (k)</span>
+              <input id="brisageUnitCost" type="text" inputmode="numeric" autocomplete="off">
+            </label>
+            <label class="field compact">
+              <span>Coefficient (%)</span>
+              <input id="brisageCoefficient" type="text" inputmode="decimal" autocomplete="off" placeholder="Optionnel">
+            </label>
+          </div>
+
+          <span class="panel-label">Runes obtenues</span>
+          <div id="brisageRunes" class="brisage-runes"></div>
+          <datalist id="brisageRuneOptions"></datalist>
+
+          <div class="market-actions brisage-actions">
+            <button id="brisageAddRune" type="button" class="icon-button">Ajouter une rune</button>
+            <button type="submit" class="icon-button primary">Enregistrer le brisage</button>
+            <button type="reset" class="icon-button">Vider</button>
+            <p id="brisagePreview" class="brisage-preview" role="status"></p>
+          </div>
+          <ul id="brisageErrors" class="brisage-errors" aria-live="polite"></ul>
+        </form>
+
+        <div class="finder-metrics brisage-metrics" aria-label="Synthèse des brisages">
+          <article>
+            <span class="panel-label">Brisages</span>
+            <strong id="brisageCount">0 brisage</strong>
+            <span id="brisageCountMeta">0 objet brisé</span>
+          </article>
+          <article>
+            <span class="panel-label">Kamas investis</span>
+            <strong id="brisageTotalCost">0 k</strong>
+            <span>Coût d’achat ou de craft des objets.</span>
+          </article>
+          <article>
+            <span class="panel-label">Valeur des runes</span>
+            <strong id="brisageTotalValue">0 k</strong>
+            <span id="brisageTotalValueMeta">Aux prix HDV actuels des runes.</span>
+          </article>
+          <article>
+            <span class="panel-label">Bénéfice</span>
+            <strong id="brisageTotalProfit">–</strong>
+            <span id="brisageTotalProfitMeta">Bénéfice = valeur des runes − coût des objets.</span>
+          </article>
+        </div>
+
+        <div class="item-table-wrap" role="region" aria-label="Historique des brisages" tabindex="0">
+          <table class="brisage-table">
+            <thead><tr>
+              <th>Date</th><th>Objet</th><th>Coef.</th><th>Coût</th><th>Runes</th><th>Valeur runes</th><th>Bénéfice</th><th></th>
+            </tr></thead>
+            <tbody id="brisageTable"></tbody>
+          </table>
+        </div>
+      </section>
+
       <footer class="footer">
         <p>Les prix sont enregistrés dans ce navigateur. Les calculs excluent les taxes HDV et utilisent 3 runes du palier inférieur par craft. Un double-clic sur une Eklame donne 2 Eklames du palier inférieur.</p>
         <p>Données issues de DofusDB. Utilisation soumise à la LPNC-IA 1.0.</p>
@@ -444,10 +521,11 @@
 
     <script src="runes-data.js"></script>
     <script src="prices.js?v=2"></script>
-    <script src="pricing.js?v=2"></script>
+    <script src="pricing.js?v=3"></script>
     <script src="market.js?v=7"></script>
     <script src="breeding-data.js"></script>
     <script src="breeding.js?v=3"></script>
-    <script src="app.js?v=12"></script>
+    <script src="brisage.js?v=1"></script>
+    <script src="app.js?v=13"></script>
   </body>
 </html>

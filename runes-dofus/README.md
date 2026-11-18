@@ -8,6 +8,8 @@ Prices are stored in the current browser by Dofus item ID. Equipment prices are 
 
 The app also includes an Eklame price comparator based on DofusDB item type 310. Pick the tier you want, enter HDV prices for the five tiers, and it compares buying that tier directly against buying higher tiers and opening them.
 
+The **Brisage** tab keeps a log of broken items. Search for the equipment, enter how many you broke, their unit cost (prefilled from the saved HDV price) and the optional coefficient, then list the runes you got. Each entry shows the cost, the rune value at the current **Prix des runes** prices, and the profit. Runes without a price are flagged instead of counted as zero. The log is stored in the browser and included in **Gérer les prix** exports and imports.
+
 ## Run with OCR
 
 From this folder:

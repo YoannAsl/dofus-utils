@@ -172,3 +172,17 @@ function getOcrApplyPrice(result) {
 function getOcrMarketPrice(result) {
   return getOcrApplyPrice(result) ?? parsePrice(result?.displayed_average_price);
 }
+
+// Rune value uses current HDV prices; runes without a price count as missing, not as zero kamas.
+function calculateBreakResult(entry, readRunePrice) {
+  const cost = entry.unitCost * entry.quantity;
+  let value = 0;
+  let missing = 0;
+  for (const { id, quantity } of entry.runes) {
+    const price = readRunePrice(id);
+    if (price === null) missing++;
+    else value += price * quantity;
+  }
+  const profit = value - cost;
+  return { cost, value, missing, profit, roi: cost ? profit / cost : null };
+}

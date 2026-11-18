@@ -850,6 +850,141 @@ tbody tr.is-ocr-updated {
 }
 
 
+.brisage-controls {
+  grid-template-columns: minmax(0, 2fr) minmax(90px, 0.6fr) minmax(0, 1fr) minmax(110px, 0.7fr);
+  align-items: start;
+}
+
+.brisage-metrics {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.brisage-item-field {
+  position: relative;
+}
+
+.brisage-item-results {
+  position: absolute;
+  z-index: 3;
+  top: 100%;
+  left: 0;
+  right: 0;
+  display: grid;
+  max-height: 320px;
+  overflow: auto;
+  margin-top: 4px;
+  padding: 4px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--surface-strong);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
+}
+
+.brisage-item-results .market-item-button {
+  padding: 4px 6px;
+  border-radius: 6px;
+}
+
+.brisage-item-results .market-item-button:hover {
+  background: var(--blue-bg);
+}
+
+.brisage-item-results small {
+  margin-left: auto;
+}
+
+.brisage-search-status {
+  margin: 6px;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.brisage-selected-item:empty {
+  display: none;
+}
+
+.brisage-runes {
+  display: grid;
+  gap: 8px;
+  margin: 6px 0 12px;
+}
+
+.brisage-rune-row {
+  display: grid;
+  grid-template-columns: minmax(0, 260px) 110px auto;
+  gap: 8px 12px;
+  align-items: end;
+  justify-content: start;
+}
+
+.brisage-actions {
+  align-items: center;
+}
+
+.brisage-preview {
+  margin: 0 0 0 auto;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.brisage-errors {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  color: var(--red);
+  font-size: 0.875rem;
+}
+
+.brisage-errors:empty {
+  display: none;
+}
+
+.brisage-table {
+  min-width: 900px;
+}
+
+.brisage-table .rune-meta {
+  display: block;
+}
+
+.brisage-rune-list {
+  max-width: 280px;
+}
+
+.brisage-rune-list span {
+  display: inline-block;
+  margin: 2px 4px 2px 0;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--emerald-bg);
+  color: var(--emerald);
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}
+
+.brisage-rune-list span.is-missing {
+  background: var(--amber-bg);
+  color: var(--amber);
+}
+
+@media (max-width: 760px) {
+  .brisage-controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .brisage-item-field {
+    grid-column: 1 / -1;
+  }
+
+  .brisage-rune-row {
+    grid-template-columns: minmax(0, 1fr) 90px auto;
+  }
+
+  .brisage-preview {
+    margin-left: 0;
+    flex-basis: 100%;
+  }
+}
+
 @media (max-width: 1040px) {
   .table-hint {
     display: block;
