@@ -187,26 +187,28 @@ function calculateBreakResult(entry, readRunePrice) {
   return { cost, value, missing, profit, roi: cost ? profit / cost : null };
 }
 
-// Shattering formulas follow DoFocus: each line weighs (3 × jet × weight × level) / (200 × rune value) + 1,
-// a negative line weighs (3 × jet) / (200 × rune value) + 1. Runes = line weight × coefficient / rune weight.
-// Focusing a line adds half of every other line's weight to it; exotic lines can't be focused.
-function shatterWeight(jet, weight, level, runeValue) {
-  return jet < 0
-    ? (3 * jet) / (200 * runeValue) + 1
-    : (3 * jet * weight * level) / (200 * runeValue) + 1;
+// Every positive line turns into rune weight: (3 × jet × characteristic weight × level) / 200 + 1.
+// That weight × coefficient becomes runes of the line, each worth characteristic weight × rune value.
+// A focus keeps the focused line's weight and adds half the weight of every other positive line,
+// all paid out in the focused rune. Maluses give nothing. Exotic lines add weight but can't be focused.
+// DoFocus divides each line by its own rune value before pooling, which inflates the focus
+// on runes worth more than one point (Vi ×5, Ini ×10, Pod ×10).
+function shatterLineWeight(jet, weight, level) {
+  return (3 * jet * weight * level) / 200 + 1;
 }
 
 function calculateShatter({ level, coefficient, lines }) {
   const factor = coefficient / 100;
-  const pools = lines.map((line) => shatterWeight(line.negative ? -line.jet : line.jet, line.weight, level, line.runeValue));
+  const pools = lines.map((line) => (line.negative ? 0 : shatterLineWeight(line.jet, line.weight, level)));
   const totalPool = pools.reduce((sum, pool) => sum + pool, 0);
   const kamas = (runeCount, price) => (runeCount === null || price === null ? null : Math.round(runeCount * price));
 
   const rows = lines.map((line, index) => {
-    const runesWithoutFocus = line.negative ? null : round2((pools[index] * factor) / line.weight);
+    const runeWeight = line.weight * line.runeValue;
+    const runesWithoutFocus = line.negative ? null : round2((pools[index] * factor) / runeWeight);
     const runesWithFocus = line.negative || line.exo
       ? null
-      : round2(((pools[index] + 0.5 * (totalPool - pools[index])) * factor) / line.weight);
+      : round2(((pools[index] + 0.5 * (totalPool - pools[index])) * factor) / runeWeight);
     return {
       runesWithoutFocus,
       kamasWithoutFocus: kamas(runesWithoutFocus, line.price),
