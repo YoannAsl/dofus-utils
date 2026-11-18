@@ -15,6 +15,7 @@ const TOOLS = [
   { to: "/prix", label: "Prix & crafts" },
   { to: "/runes", label: "Prix des runes" },
   { to: "/items-fm", label: "Items FM" },
+  { to: "/eklames", label: "Eklames" },
 ] as const;
 
 function RootLayout() {

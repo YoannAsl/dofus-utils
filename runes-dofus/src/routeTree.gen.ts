@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as EklamesRouteImport } from './routes/eklames'
 import { Route as ItemsFmRouteImport } from './routes/items-fm'
 import { Route as PrixRouteImport } from './routes/prix'
 import { Route as RunesRouteImport } from './routes/runes'
@@ -17,6 +18,11 @@ import { Route as RunesRouteImport } from './routes/runes'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EklamesRoute = EklamesRouteImport.update({
+  id: '/eklames',
+  path: '/eklames',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ItemsFmRoute = ItemsFmRouteImport.update({
@@ -37,12 +43,14 @@ const RunesRoute = RunesRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/eklames': typeof EklamesRoute
   '/items-fm': typeof ItemsFmRoute
   '/prix': typeof PrixRoute
   '/runes': typeof RunesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/eklames': typeof EklamesRoute
   '/items-fm': typeof ItemsFmRoute
   '/prix': typeof PrixRoute
   '/runes': typeof RunesRoute
@@ -50,20 +58,22 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/eklames': typeof EklamesRoute
   '/items-fm': typeof ItemsFmRoute
   '/prix': typeof PrixRoute
   '/runes': typeof RunesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/items-fm' | '/prix' | '/runes'
+  fullPaths: '/' | '/eklames' | '/items-fm' | '/prix' | '/runes'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/items-fm' | '/prix' | '/runes'
-  id: '__root__' | '/' | '/items-fm' | '/prix' | '/runes'
+  to: '/' | '/eklames' | '/items-fm' | '/prix' | '/runes'
+  id: '__root__' | '/' | '/eklames' | '/items-fm' | '/prix' | '/runes'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  EklamesRoute: typeof EklamesRoute
   ItemsFmRoute: typeof ItemsFmRoute
   PrixRoute: typeof PrixRoute
   RunesRoute: typeof RunesRoute
@@ -76,6 +86,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/eklames': {
+      id: '/eklames'
+      path: '/eklames'
+      fullPath: '/eklames'
+      preLoaderRoute: typeof EklamesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/items-fm': {
@@ -104,6 +121,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  EklamesRoute: EklamesRoute,
   ItemsFmRoute: ItemsFmRoute,
   PrixRoute: PrixRoute,
   RunesRoute: RunesRoute,
