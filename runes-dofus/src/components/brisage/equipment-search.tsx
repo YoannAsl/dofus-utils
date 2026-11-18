@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
+import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
 import { ItemIcon, Meta } from "@/components/common";
 import { Input } from "@/components/ui/input";
 import { itemName, marketNamePattern, searchEquipment, type DofusItem } from "@/lib/dofusdb";
@@ -27,17 +28,12 @@ export function EquipmentSearch({
     return () => clearTimeout(timer);
   }, [value]);
 
-  useEffect(() => {
-    if (!open) return;
-    const onClick = (event: MouseEvent) => {
-      if (!container.current?.contains(event.target as Node)) setOpen(false);
-    };
-    document.addEventListener("click", onClick);
-    return () => document.removeEventListener("click", onClick);
-  }, [open]);
-
   const enabled = open && Boolean(marketNamePattern(term));
-  const results = useQuery({ queryKey: ["equipment", term], queryFn: ({ signal }) => searchEquipment(term, signal), enabled });
+  const results = useQuery({
+    queryKey: ["equipment", term],
+    queryFn: ({ signal }) => searchEquipment(term, signal),
+    enabled,
+  });
   const pending = term !== value.trim().slice(0, 120) || results.isFetching;
 
   function select(item: DofusItem) {
@@ -47,50 +43,60 @@ export function EquipmentSearch({
   }
 
   return (
-    <div ref={container} className="relative">
-      <Input
-        id={id}
-        type="search"
-        autoComplete="off"
-        placeholder={placeholder}
-        value={value}
-        onChange={(event) => {
-          onValueChange(event.currentTarget.value);
-          setOpen(true);
-        }}
-        onKeyDown={(event) => {
-          if (event.key === "Escape") setOpen(false);
-          if (event.key === "Enter") {
-            event.preventDefault();
-            const first = results.data?.[0];
-            if (open && first && !pending) select(first);
-          }
-        }}
-      />
-      {enabled || (open && pending && value.trim()) ? (
-        <div className="absolute top-full right-0 left-0 z-20 mt-1 flex max-h-80 flex-col overflow-y-auto rounded-lg border bg-popover p-1 text-popover-foreground shadow-md">
-          {pending ? (
-            <p className="px-2 py-1.5 text-sm text-muted-foreground">Recherche…</p>
-          ) : results.isError ? (
-            <p className="px-2 py-1.5 text-sm text-muted-foreground">Catalogue DofusDB indisponible.</p>
-          ) : !results.data?.length ? (
-            <p className="px-2 py-1.5 text-sm text-muted-foreground">Aucun équipement trouvé.</p>
-          ) : (
-            results.data.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => select(item)}
-                className="flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted focus-visible:bg-muted focus-visible:outline-none"
-              >
-                <ItemIcon item={item} className="size-7" />
-                <span className="flex-1">{itemName(item)}</span>
-                <Meta>Niv. {item.level ?? "–"}</Meta>
-              </button>
-            ))
-          )}
+    <Popover open={open && Boolean(enabled || (pending && value.trim()))} onOpenChange={setOpen}>
+      <PopoverAnchor asChild>
+        <div ref={container}>
+          <Input
+            id={id}
+            type="search"
+            autoComplete="off"
+            placeholder={placeholder}
+            value={value}
+            onChange={(event) => {
+              onValueChange(event.currentTarget.value);
+              setOpen(true);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") setOpen(false);
+              if (event.key === "Enter") {
+                event.preventDefault();
+                const first = results.data?.[0];
+                if (open && first && !pending) select(first);
+              }
+            }}
+          />
         </div>
-      ) : null}
-    </div>
+      </PopoverAnchor>
+      <PopoverContent
+        align="start"
+        className="max-h-80 w-(--radix-popover-trigger-width) gap-0 overflow-y-auto p-1"
+        // Keep typing in the input: don't steal focus, and clicks on the input itself don't count as outside.
+        onOpenAutoFocus={(event) => event.preventDefault()}
+        onInteractOutside={(event) => {
+          if (container.current?.contains(event.target as Node)) event.preventDefault();
+        }}
+      >
+        {pending ? (
+          <p className="px-2 py-1.5 text-sm text-muted-foreground">Recherche…</p>
+        ) : results.isError ? (
+          <p className="px-2 py-1.5 text-sm text-muted-foreground">Catalogue DofusDB indisponible.</p>
+        ) : !results.data?.length ? (
+          <p className="px-2 py-1.5 text-sm text-muted-foreground">Aucun équipement trouvé.</p>
+        ) : (
+          results.data.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => select(item)}
+              className="flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted focus-visible:bg-muted focus-visible:outline-none"
+            >
+              <ItemIcon item={item} className="size-7" />
+              <span className="flex-1">{itemName(item)}</span>
+              <Meta>Niv. {item.level ?? "–"}</Meta>
+            </button>
+          ))
+        )}
+      </PopoverContent>
+    </Popover>
   );
 }
