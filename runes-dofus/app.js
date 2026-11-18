@@ -703,11 +703,7 @@ async function processOcrImage(file) {
     $("#ocrPriceInput").value = marketPrice ?? "";
     renderOcrControls();
 
-    if (matchedRune) {
-      selectTool($("#runesTab"));
-    } else if (!target) {
-      selectTool($("#marketTab"));
-    }
+    if (!target) selectTool($("#marketTab"));
 
     const price = matchedRune ? getOcrApplyPrice(result) : marketPrice;
     if (target && price && !result.warnings?.length) applyOcrPrice(target, price);
