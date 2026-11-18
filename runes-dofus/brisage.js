@@ -3,6 +3,8 @@ const BRISAGE_STORAGE_KEY = "dofus-brisage-log-v1";
 const brisage = {
   entries: [],
   item: null,
+  // Id of the logged entry loaded in the form; null when the form adds a new entry.
+  editingId: null,
 };
 
 function loadBrisageEntries() {
@@ -112,7 +114,7 @@ function readBrisageForm() {
     entry: {
       id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
       date: new Date().toISOString(),
-      itemId: brisage.item ? Number(brisage.item.id) : null,
+      itemId: brisage.item?.id == null ? null : Number(brisage.item.id),
       itemName: brisage.item ? marketItemName(brisage.item) : "",
       iconId: Number.isInteger(brisage.item?.iconId) ? brisage.item.iconId : null,
       level: Number.isInteger(brisage.item?.level) ? brisage.item.level : null,
@@ -139,15 +141,48 @@ function formatMissing(missing) {
   return missing ? ` <span class="badge missing">${missing} prix manquant${missing === 1 ? "" : "s"}</span>` : "";
 }
 
-function selectBrisageItem(item) {
+function showBrisageItem(item) {
   brisage.item = item;
   $("#brisageItemSearch").value = marketItemName(item);
-  const price = marketPriceOf(item.id);
-  if (price !== null) $("#brisageUnitCost").value = price;
-  $("#brisageSelectedItem").innerHTML = `${marketItemIcon(item)}<strong>${escapeHtml(marketItemName(item))}</strong>
+  const price = item.id == null ? null : marketPriceOf(item.id);
+  $("#brisageSelectedItem").innerHTML = `${item.iconId || item.img ? marketItemIcon(item) : ""}<strong>${escapeHtml(marketItemName(item))}</strong>
     <span class="rune-meta">${item.level != null ? `Niv. ${escapeHtml(item.level)}` : ""}${price !== null ? ` · prix HDV enregistré ${formatMoney(price)} k` : ""}</span>`;
+  return price;
+}
+
+function selectBrisageItem(item) {
+  const price = showBrisageItem(item);
+  if (price !== null) $("#brisageUnitCost").value = price;
   renderBrisagePreview();
   $("#brisageQuantity").focus();
+}
+
+// Loads a logged entry in the form; submitting then replaces it, keeping its id and date.
+function editBrisage(id) {
+  const entry = brisage.entries.find((candidate) => candidate.id === id);
+  if (!entry) return;
+  resetBrisageForm();
+  brisage.editingId = id;
+  showBrisageItem({ id: entry.itemId, name: entry.itemName, iconId: entry.iconId, level: entry.level });
+  $("#brisageQuantity").value = entry.quantity;
+  $("#brisageUnitCost").value = entry.unitCost;
+  $("#brisageCoefficient").value = entry.coefficient === null ? "" : String(entry.coefficient).replace(".", ",");
+  $("#brisageRunes").innerHTML = entry.runes
+    .map(({ id: runeId, quantity }) => brisageRuneRow(runeById.get(runeId), quantity)).join("");
+  renderBrisageEditState();
+  renderBrisagePreview();
+  $("#brisageForm").scrollIntoView({ behavior: "smooth", block: "start" });
+  $("#brisageQuantity").focus({ preventScroll: true });
+}
+
+function renderBrisageEditState() {
+  const editing = brisage.editingId !== null;
+  $("#brisageSubmit").textContent = editing ? "Mettre à jour le brisage" : "Enregistrer le brisage";
+  $("#brisageReset").textContent = editing ? "Annuler la modification" : "Vider";
+  $("#brisageForm").classList.toggle("is-editing", editing);
+  for (const button of $("#brisageTable").querySelectorAll("[data-edit-brisage]")) {
+    button.closest("tr").classList.toggle("is-editing", button.dataset.editBrisage === brisage.editingId);
+  }
 }
 
 // Debounced DofusDB search over FM equipment types, shared by the calculator and the log form.
@@ -216,6 +251,8 @@ function bindEquipmentSearch(input, list, onSelect) {
 
 function resetBrisageForm() {
   brisage.item = null;
+  brisage.editingId = null;
+  renderBrisageEditState();
   $("#brisageItemSearch").value = "";
   $("#brisageSelectedItem").replaceChildren();
   $("#brisageQuantity").value = 1;
@@ -234,7 +271,10 @@ function submitBrisage(event) {
     errorList.innerHTML = errors.map((error) => `<li>${escapeHtml(error)}</li>`).join("");
     return;
   }
-  saveBrisageEntries([entry, ...brisage.entries]);
+  const original = brisage.entries.find((candidate) => candidate.id === brisage.editingId);
+  saveBrisageEntries(original
+    ? brisage.entries.map((candidate) => (candidate === original ? { ...entry, id: original.id, date: original.date } : candidate))
+    : [entry, ...brisage.entries]);
   resetBrisageForm();
   renderBrisageLog();
   $("#brisageItemSearch").focus();
@@ -265,7 +305,7 @@ function renderBrisageLog() {
 
   $("#brisageTable").innerHTML = rows.length
     ? rows.map(({ entry, result }) => `
-      <tr>
+      <tr class="${entry.id === brisage.editingId ? "is-editing" : ""}">
         <td>${escapeHtml(new Date(entry.date).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "2-digit" }))}</td>
         <td><div class="market-item-label">
           ${entry.iconId ? marketItemIcon({ iconId: entry.iconId }) : ""}
@@ -281,8 +321,12 @@ function renderBrisageLog() {
         }).join("")}</td>
         <td class="num">${formatMoney(result.value)} k${formatMissing(result.missing)}</td>
         <td class="num">${formatGain(result.profit)}${result.cost ? `<span class="rune-meta">${formatter.format(round2(result.roi * 100))} %</span>` : ""}</td>
-        <td><button type="button" class="icon-button danger" data-delete-brisage="${escapeAttr(entry.id)}"
-          aria-label="${escapeAttr(`Supprimer le brisage ${entry.itemName}`)}">Supprimer</button></td>
+        <td><div class="brisage-row-actions">
+          <button type="button" class="icon-button" data-edit-brisage="${escapeAttr(entry.id)}"
+            aria-label="${escapeAttr(`Modifier le brisage ${entry.itemName}`)}">Modifier</button>
+          <button type="button" class="icon-button danger" data-delete-brisage="${escapeAttr(entry.id)}"
+            aria-label="${escapeAttr(`Supprimer le brisage ${entry.itemName}`)}">Supprimer</button>
+        </div></td>
       </tr>`).join("")
     : `<tr><td class="empty-state" colspan="8">Aucun brisage enregistré.</td></tr>`;
   renderBrisagePreview();
@@ -326,9 +370,15 @@ function bindBrisageEvents() {
     resetBrisageForm();
   });
   $("#brisageTable").addEventListener("click", (event) => {
+    const editButton = event.target.closest("[data-edit-brisage]");
+    if (editButton) {
+      editBrisage(editButton.dataset.editBrisage);
+      return;
+    }
     const button = event.target.closest("[data-delete-brisage]");
     if (!button || !confirm("Supprimer ce brisage du suivi ?")) return;
     saveBrisageEntries(brisage.entries.filter((entry) => entry.id !== button.dataset.deleteBrisage));
+    if (brisage.editingId === button.dataset.deleteBrisage) resetBrisageForm();
     renderBrisageLog();
   });
   resetBrisageForm();

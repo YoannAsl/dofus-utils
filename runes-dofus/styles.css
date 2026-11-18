@@ -1157,6 +1157,19 @@ tbody tr.is-ocr-updated {
   max-width: 280px;
 }
 
+.brisage-row-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.brisage-form.is-editing {
+  border-color: var(--blue);
+}
+
+.brisage-table tr.is-editing {
+  background: var(--blue-bg);
+}
+
 .brisage-rune-list span {
   display: inline-block;
   margin: 2px 4px 2px 0;

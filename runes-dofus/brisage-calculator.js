@@ -297,6 +297,7 @@ function setShatterJets(preset) {
 function recordShatterInLog() {
   const item = shatterSim.item;
   if (!item) return;
+  resetBrisageForm();
   selectBrisageItem(item);
   const cost = marketPriceOf(item.id);
   if (cost !== null) $("#brisageUnitCost").value = cost;
