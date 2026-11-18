@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as BrisageRouteImport } from './routes/brisage'
 import { Route as EklamesRouteImport } from './routes/eklames'
 import { Route as ElevageRouteImport } from './routes/elevage'
 import { Route as ItemsFmRouteImport } from './routes/items-fm'
@@ -19,6 +20,11 @@ import { Route as RunesRouteImport } from './routes/runes'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BrisageRoute = BrisageRouteImport.update({
+  id: '/brisage',
+  path: '/brisage',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EklamesRoute = EklamesRouteImport.update({
@@ -49,6 +55,7 @@ const RunesRoute = RunesRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/brisage': typeof BrisageRoute
   '/eklames': typeof EklamesRoute
   '/elevage': typeof ElevageRoute
   '/items-fm': typeof ItemsFmRoute
@@ -57,6 +64,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/brisage': typeof BrisageRoute
   '/eklames': typeof EklamesRoute
   '/elevage': typeof ElevageRoute
   '/items-fm': typeof ItemsFmRoute
@@ -66,6 +74,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/brisage': typeof BrisageRoute
   '/eklames': typeof EklamesRoute
   '/elevage': typeof ElevageRoute
   '/items-fm': typeof ItemsFmRoute
@@ -74,12 +83,27 @@ export interface FileRoutesById {
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/eklames' | '/elevage' | '/items-fm' | '/prix' | '/runes'
+  fullPaths:
+    | '/'
+    | '/brisage'
+    | '/eklames'
+    | '/elevage'
+    | '/items-fm'
+    | '/prix'
+    | '/runes'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/eklames' | '/elevage' | '/items-fm' | '/prix' | '/runes'
+  to:
+    | '/'
+    | '/brisage'
+    | '/eklames'
+    | '/elevage'
+    | '/items-fm'
+    | '/prix'
+    | '/runes'
   id:
     | '__root__'
     | '/'
+    | '/brisage'
     | '/eklames'
     | '/elevage'
     | '/items-fm'
@@ -89,6 +113,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  BrisageRoute: typeof BrisageRoute
   EklamesRoute: typeof EklamesRoute
   ElevageRoute: typeof ElevageRoute
   ItemsFmRoute: typeof ItemsFmRoute
@@ -103,6 +128,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/brisage': {
+      id: '/brisage'
+      path: '/brisage'
+      fullPath: '/brisage'
+      preLoaderRoute: typeof BrisageRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/eklames': {
@@ -145,6 +177,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  BrisageRoute: BrisageRoute,
   EklamesRoute: EklamesRoute,
   ElevageRoute: ElevageRoute,
   ItemsFmRoute: ItemsFmRoute,

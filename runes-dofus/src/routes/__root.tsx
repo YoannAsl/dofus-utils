@@ -17,6 +17,7 @@ const TOOLS = [
   { to: "/items-fm", label: "Items FM" },
   { to: "/eklames", label: "Eklames" },
   { to: "/elevage", label: "Carburants d’élevage" },
+  { to: "/brisage", label: "Brisage" },
 ] as const;
 
 function RootLayout() {
