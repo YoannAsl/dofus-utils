@@ -14,7 +14,7 @@ The tab also keeps a log of broken items. Search for the equipment, enter how ma
 
 ## Run with OCR
 
-From this folder:
+The app is built with Vite, React, TypeScript, TanStack Router and shadcn/ui, so it needs Node.js 20+ the first time. The launch scripts install dependencies and rebuild the app automatically when its sources changed. From this folder:
 
 ```powershell
 .\start-with-ocr.ps1
@@ -42,4 +42,18 @@ Set up a dedicated Dofus region capture hotkey in ShareX so you can send just th
 
 Keep the OCR server running and capture the popup with that hotkey. Atelier Dofus opens the OCR panel with the captured image. If the page is closed, the running server keeps the last 10 captures in memory for the page to pick up when it opens. If you start the server on a custom port, use that port in the ShareX action too.
 
-You can also paste a screenshot or choose an image file in the OCR panel. Opening `index.html` directly supports manual price entry.
+You can also paste a screenshot or choose an image file in the OCR panel.
+
+Prices, the shattering log and coefficients are stored in the browser under the same keys as earlier versions, so existing data carries over.
+
+## Develop
+
+```powershell
+npm install
+npm run dev        # Vite dev server; forwards /api to the OCR server on 127.0.0.1:8765
+npm test           # Vitest on the pricing, shattering and import logic
+npm run typecheck
+npm run build      # Builds dist/, which the OCR server serves
+```
+
+Run `..\start-runes-ocr.ps1` alongside `npm run dev` to get OCR and ShareX captures in development. Each tab is a route in `src/routes`, the calculations live in `src/lib`, and saved data lives in the Zustand stores in `src/stores`.
