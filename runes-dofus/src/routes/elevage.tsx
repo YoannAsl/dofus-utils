@@ -1,6 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { DecisionBadge, ItemIcon, Meta, PageHeader } from "@/components/common";
+import { CopyIcon } from "lucide-react";
+import { copyText, DecisionBadge, ItemIcon, Meta, PageHeader } from "@/components/common";
 import { PriceInput } from "@/components/price-input";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -78,7 +80,12 @@ function BreedingPage() {
                     <div className="flex items-center gap-2">
                       <ItemIcon item={fuel} />
                       <span>
-                        <span className="block font-medium whitespace-normal">{fuel.name}</span>
+                        <span className="flex items-center gap-1">
+                          <span className="font-medium whitespace-normal">{fuel.name}</span>
+                          <Button variant="ghost" size="icon-xs" aria-label={`Copier ${fuel.name}`} title="Copier le nom" onClick={() => copyText(fuel.name)}>
+                            <CopyIcon />
+                          </Button>
+                        </span>
                         <Meta className="md:hidden">
                           +{recharge} pts · {cap === null ? "Jusqu’au max. de la jauge" : `Jusqu’à ${cap}`}
                         </Meta>
