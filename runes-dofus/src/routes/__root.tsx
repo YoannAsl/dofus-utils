@@ -16,6 +16,7 @@ const TOOLS = [
   { to: "/runes", label: "Prix des runes" },
   { to: "/items-fm", label: "Items FM" },
   { to: "/eklames", label: "Eklames" },
+  { to: "/elevage", label: "Carburants d’élevage" },
 ] as const;
 
 function RootLayout() {
