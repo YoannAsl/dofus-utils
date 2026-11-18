@@ -1,5 +1,4 @@
 import { create } from "zustand";
-import { EKLAMES } from "@/lib/eklames";
 import { parsePriceMap, type PriceMap } from "@/lib/prices";
 import { runeById } from "@/lib/runes";
 import { readStorage, writeStorage } from "@/lib/storage";
@@ -8,16 +7,13 @@ import { readStorage, writeStorage } from "@/lib/storage";
 const PRICE_STORAGE_KEYS = {
   prices: "dofus-rune-prices-v1",
   itemPrices: "dofus-fm-item-prices-v1",
-  eklamePrices: "dofus-eklame-prices-v1",
 } as const;
 
 export type PriceGroup = keyof typeof PRICE_STORAGE_KEYS;
 const GROUPS = Object.keys(PRICE_STORAGE_KEYS) as PriceGroup[];
-const eklameIds = new Set(EKLAMES.map((eklame) => eklame.id));
 
 export function groupForItem(id: string | number): PriceGroup {
   if (runeById.has(String(id))) return "prices";
-  if (eklameIds.has(String(id))) return "eklamePrices";
   return "itemPrices";
 }
 
@@ -58,7 +54,7 @@ export function readPrice(values: PriceValues, id: string | number) {
   return Number.isFinite(price) && price > 0 ? price : null;
 }
 
-/** Saved HDV price of any item (rune, Eklame or catalogue item), or null. */
+/** Saved HDV price of any item (rune or catalogue item), or null. */
 export function usePrice(id: string | number | null | undefined) {
   return usePriceStore((state) => (id == null ? null : readPrice(state.values, id)));
 }
@@ -87,7 +83,6 @@ export function mergePrices(payload: Record<string, unknown>) {
     // Exports from the first version were a bare map of rune prices.
     prices: parsePriceMap(payload.prices || payload),
     itemPrices: parsePriceMap(payload.itemPrices),
-    eklamePrices: parsePriceMap(payload.eklamePrices),
   };
   replace(Object.fromEntries(GROUPS.map((group) => [group, { ...values[group], ...incoming[group] }])));
 }

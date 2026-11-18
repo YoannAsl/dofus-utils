@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { calculateBreedingCosts } from "@/lib/breeding";
-import { EKLAMES } from "@/lib/eklames";
-import { calculateEklameRows, calculateRecipeCost, calculateRuneAcquisition, getOcrApplyPrice, getTargetDensityCost } from "@/lib/pricing";
+import { calculateRecipeCost, calculateRuneAcquisition, getOcrApplyPrice, getTargetDensityCost } from "@/lib/pricing";
 import { parsePrice, parsePriceMap } from "@/lib/prices";
 import { findRuneByName, findRuneByOcrName, runeFamily, runes } from "@/lib/runes";
 import { calculateBreakEvenCoefficient, calculateBreakResult, calculateShatter } from "@/lib/shatter";
@@ -97,13 +96,6 @@ describe("market and fuel costs", () => {
   it("adds known recipe subtotals and counts missing prices", () => {
     const cost = calculateRecipeCost([{ id: 1, quantity: 3 }, { id: 2, quantity: 2 }], (id) => (id === "1" ? 7 : null));
     expect(cost).toEqual({ subtotals: [21, null], total: 21, missing: 1 });
-  });
-
-  it("compares opening higher Eklame tiers with buying the target", () => {
-    const prices: Record<string, number> = { "31520": 1000, "31521": 1500 };
-    const rows = calculateEklameRows(EKLAMES, EKLAMES[2]!, (eklame) => prices[eklame.id] ?? null);
-    expect(rows.map((row) => row.costPerTarget)).toEqual([null, null, 1000, 750, null]);
-    expect(rows.map((row) => row.decision)).toEqual(["neutral", "neutral", "buy", "craft", "missing"]);
   });
 
   it("prices breeding fuels per 10 000 points and per gauge tier", () => {

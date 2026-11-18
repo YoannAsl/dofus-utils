@@ -109,27 +109,6 @@ export function calculateRecipeCost(ingredients: { id: number | string; quantity
   return { subtotals, total, missing };
 }
 
-export interface Eklame {
-  id: string;
-  name: string;
-  levelRange: string;
-  factor: number;
-  iconId: number;
-}
-
-export function calculateEklameRows(eklames: Eklame[], target: Eklame, readEklamePrice: (eklame: Eklame) => number | null) {
-  const targetIndex = eklames.findIndex((eklame) => eklame.id === target.id);
-  return eklames.map((eklame, index) => {
-    const directPrice = readEklamePrice(eklame);
-    const canOpenToTarget = index >= targetIndex;
-    const targetQuantity = canOpenToTarget ? eklame.factor / target.factor : null;
-    const costPerTarget = directPrice && targetQuantity ? directPrice / targetQuantity : null;
-    const action = !canOpenToTarget ? "Trop bas" : index === targetIndex ? "Acheter" : "Ouvrir";
-    const decision: Decision = !canOpenToTarget ? "neutral" : costPerTarget ? (index === targetIndex ? "buy" : "craft") : "missing";
-    return { eklame, directPrice, canOpenToTarget, targetQuantity, costPerTarget, action, decision };
-  });
-}
-
 export interface OcrLot {
   quantity: number;
   total_price: number;

@@ -16,7 +16,6 @@ const TOOLS = [
   { to: "/prix", label: "Prix & crafts" },
   { to: "/runes", label: "Prix des runes" },
   { to: "/items-fm", label: "Items FM" },
-  { to: "/eklames", label: "Eklames" },
   { to: "/elevage", label: "Carburants d’élevage" },
   { to: "/brisage", label: "Brisage" },
 ] as const;
@@ -83,8 +82,7 @@ function RootLayout() {
 
         <footer className="mt-4 flex flex-col gap-1 border-t pt-4 text-xs text-muted-foreground">
           <p>
-            Les prix sont enregistrés dans ce navigateur. Les calculs excluent les taxes HDV et utilisent 3 runes du palier inférieur par craft. Un
-            double-clic sur une Eklame donne 2 Eklames du palier inférieur.
+            Les prix sont enregistrés dans ce navigateur. Les calculs excluent les taxes HDV et utilisent 3 runes du palier inférieur par craft.
           </p>
           <p>Données issues de DofusDB. Utilisation soumise à la LPNC-IA 1.0.</p>
         </footer>
