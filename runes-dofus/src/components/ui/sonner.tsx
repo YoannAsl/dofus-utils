@@ -1,12 +1,13 @@
 import { Toaster as Sonner, type ToasterProps } from "sonner"
+import { useThemeStore } from "@/stores/theme"
 import { CircleCheckIcon, InfoIcon, TriangleAlertIcon, OctagonXIcon, Loader2Icon } from "lucide-react"
 
 const Toaster = ({ ...props }: ToasterProps) => {
-
+  const theme = useThemeStore((state) => state.resolved)
 
   return (
     <Sonner
-      theme="system"
+      theme={theme}
       className="toaster group"
       icons={{
         success: (

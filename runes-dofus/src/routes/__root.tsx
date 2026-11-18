@@ -3,6 +3,7 @@ import { createRootRouteWithContext, Link, Outlet, useNavigate } from "@tanstack
 import { useEffect } from "react";
 import { firstImageFile, OcrPanel } from "@/components/ocr-panel";
 import { PriceTools } from "@/components/price-tools";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { processOcrImage, setOcrMarketNavigator, startCapturePolling } from "@/stores/ocr";
@@ -53,7 +54,10 @@ function RootLayout() {
       <main className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 py-6 sm:px-6">
         <header className="flex items-center justify-between gap-2">
           <h1 className="text-2xl font-semibold tracking-tight">Atelier Dofus</h1>
-          <PriceTools />
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <PriceTools />
+          </div>
         </header>
 
         <nav aria-label="Outils" className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
