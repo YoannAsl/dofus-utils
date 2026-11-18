@@ -6,11 +6,13 @@ Open an item to save its market price in kamas per unit. For craftable items, th
 
 Prices are stored in the current browser by Dofus item ID. Equipment prices are shared with **Items FM**. Use **Gérer les prix** to export a backup or merge prices from a previous export.
 
-The app also includes an Eklame price comparator based on DofusDB item type 310. Pick the tier you want, enter HDV prices for the five tiers, and it compares buying that tier directly against buying higher tiers and opening them.
+The **Brisage** tab starts with a shattering calculator. Pick an equipment and set its coefficient and price. For each characteristic, it shows the runes and kamas you get without focus and with that characteristic focused, using the community shattering formula (line weight = 3 × jet × characteristic weight × level / 200 + 1, focus adds half the weight of the other positive lines) and your rune prices. Adjust jets, add exotic lines with **+ Exo**, and read the best option, the profit and the break-even coefficient. Coefficients are remembered per item. **Noter ce brisage** copies the item, price and coefficient into the log below.
+
+The tab also keeps a log of broken items. Search for the equipment, enter how many you broke, their unit cost (prefilled from the saved HDV price) and the optional coefficient, then list the runes you got. Each entry shows the cost, the rune value at the current **Prix des runes** prices, and the profit. Runes without a price are flagged instead of counted as zero. The log is stored in the browser and included in **Gérer les prix** exports and imports.
 
 ## Run with OCR
 
-From this folder:
+The app is built with Vite, React, TypeScript, TanStack Router and shadcn/ui, so it needs Node.js 20+ the first time. The launch scripts install dependencies and rebuild the app automatically when its sources changed. From this folder:
 
 ```powershell
 .\start-with-ocr.ps1
@@ -38,4 +40,18 @@ Set up a dedicated Dofus region capture hotkey in ShareX so you can send just th
 
 Keep the OCR server running and capture the popup with that hotkey. Atelier Dofus opens the OCR panel with the captured image. If the page is closed, the running server keeps the last 10 captures in memory for the page to pick up when it opens. If you start the server on a custom port, use that port in the ShareX action too.
 
-You can also paste a screenshot or choose an image file in the OCR panel. Opening `index.html` directly supports manual price entry.
+You can also paste a screenshot or choose an image file in the OCR panel.
+
+Prices, the shattering log and coefficients are stored in the browser under the same keys as earlier versions, so existing data carries over.
+
+## Develop
+
+```powershell
+npm install
+npm run dev        # Vite dev server; forwards /api to the OCR server on 127.0.0.1:8765
+npm test           # Vitest on the pricing, shattering and import logic
+npm run typecheck
+npm run build      # Builds dist/, which the OCR server serves
+```
+
+Run `..\start-runes-ocr.ps1` alongside `npm run dev` to get OCR and ShareX captures in development. Each tab is a route in `src/routes`, the calculations live in `src/lib`, and saved data lives in the Zustand stores in `src/stores`.

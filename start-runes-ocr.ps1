@@ -27,6 +27,27 @@ if (Test-Path $bundledPython) {
     throw "Python 3 was not found. Install Python 3.10+ or run from Codex where the bundled runtime is available."
 }
 
+# The server serves the built app: rebuild it when the sources changed since the last build.
+$distIndex = Join-Path $runesRoot "dist\index.html"
+$sources = @(Get-ChildItem -Path (Join-Path $runesRoot "src") -Recurse -File) + @(Get-Item (Join-Path $runesRoot "index.html"), (Join-Path $runesRoot "package.json"))
+$lastSourceChange = ($sources | Measure-Object -Property LastWriteTime -Maximum).Maximum
+if (-not (Test-Path $distIndex) -or (Get-Item $distIndex).LastWriteTime -lt $lastSourceChange) {
+    if (-not (Test-Command "npm")) {
+        throw "Node.js (npm) is required to build runes-dofus. Install Node.js 20+ and run this script again."
+    }
+    Push-Location $runesRoot
+    try {
+        if (-not (Test-Path (Join-Path $runesRoot "node_modules"))) {
+            npm install
+            if ($LASTEXITCODE -ne 0) { throw "npm install failed" }
+        }
+        npm run build
+        if ($LASTEXITCODE -ne 0) { throw "npm run build failed" }
+    } finally {
+        Pop-Location
+    }
+}
+
 $env:PYTHONPATH = Join-Path $ocrRoot "src"
-& $python @pythonArgs -m dofus_ocr.server --static-dir $runesRoot @ArgsForServer
+& $python @pythonArgs -m dofus_ocr.server --static-dir (Join-Path $runesRoot "dist") @ArgsForServer
 exit $LASTEXITCODE

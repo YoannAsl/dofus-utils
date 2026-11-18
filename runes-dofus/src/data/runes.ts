@@ -1,4 +1,6 @@
-window.RUNE_DATA = [
+import type { RawRune } from "@/lib/runes";
+
+export const RUNE_DATA: RawRune[] = [
   {
     "id": 1519,
     "name": "Rune Fo",

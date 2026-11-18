@@ -24,6 +24,16 @@ PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 
 class RunesOcrHandler(SimpleHTTPRequestHandler):
     server_version = "DofusRunesOcr/0.1"
+    # Windows can map .js to text/plain in the registry, which browsers refuse for module scripts.
+    extensions_map = {
+        **SimpleHTTPRequestHandler.extensions_map,
+        ".js": "text/javascript",
+        ".mjs": "text/javascript",
+        ".css": "text/css",
+        ".json": "application/json",
+        ".svg": "image/svg+xml",
+        ".woff2": "font/woff2",
+    }
     captures: deque[tuple[int, bytes]]
     captures_lock: Lock
     capture_session: str
@@ -35,15 +45,7 @@ class RunesOcrHandler(SimpleHTTPRequestHandler):
         if self.path.split("?", 1)[0] == CAPTURES_PATH:
             self.send_header("Cache-Control", "no-store")
             self.send_header("X-Content-Type-Options", "nosniff")
-        else:
-            self.send_header("Access-Control-Allow-Origin", "*")
-            self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-            self.send_header("Access-Control-Allow-Headers", "Content-Type")
         super().end_headers()
-
-    def do_OPTIONS(self) -> None:
-        self.send_response(204)
-        self.end_headers()
 
     def do_GET(self) -> None:
         path, _, query = self.path.partition("?")
@@ -55,6 +57,9 @@ class RunesOcrHandler(SimpleHTTPRequestHandler):
             self._send_json(build_health_payload())
             return
 
+        # The app routes in the browser (/brisage, /runes…): serve index.html for page URLs.
+        if "." not in path.rsplit("/", 1)[-1] and not Path(self.translate_path(path)).is_file():
+            self.path = "/index.html"
         super().do_GET()
 
     def do_POST(self) -> None:
@@ -184,14 +189,14 @@ def build_parser() -> argparse.ArgumentParser:
         "--static-dir",
         type=Path,
         default=default_static_dir(),
-        help="Directory containing the runes web app.",
+        help="Directory containing the built runes web app. Defaults to runes-dofus/dist.",
     )
     return parser
 
 
 def default_static_dir() -> Path:
     workspace_root = Path(__file__).resolve().parents[3]
-    return workspace_root / "runes-dofus"
+    return workspace_root / "runes-dofus" / "dist"
 
 
 def make_handler(static_dir: Path):
@@ -230,7 +235,7 @@ def main(argv: list[str] | None = None) -> int:
     if not static_dir.exists():
         parser.error(f"static directory does not exist: {static_dir}")
     if not (static_dir / "index.html").exists():
-        parser.error(f"static directory does not contain index.html: {static_dir}")
+        parser.error(f"static directory does not contain index.html: {static_dir} (run npm run build in runes-dofus)")
 
     server = ThreadingHTTPServer((args.host, args.port), make_handler(static_dir))
     url = f"http://{args.host}:{server.server_port}/"

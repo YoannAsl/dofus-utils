@@ -1,5 +1,7 @@
+import type { BreedingFuel } from "@/lib/breeding";
+
 // DofusDB, objets de type 326. Le plafond absent des élixirs est représenté par null.
-const BREEDING_FUELS = {
+export const BREEDING_FUELS: Record<string, BreedingFuel[]> = {
   "Perte de sérénité": [
     { id: 33309, name: "Minuscule Extrait de perte de Sérénité", iconId: 93198, recharge: 2000, cap: 80000 },
     { id: 33315, name: "Petit Extrait de perte de Sérénité", iconId: 93222, recharge: 4000, cap: 80000 },
