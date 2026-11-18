@@ -14,6 +14,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 const TOOLS = [
   { to: "/prix", label: "Prix & crafts" },
   { to: "/runes", label: "Prix des runes" },
+  { to: "/items-fm", label: "Items FM" },
 ] as const;
 
 function RootLayout() {

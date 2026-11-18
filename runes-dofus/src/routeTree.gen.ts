@@ -10,12 +10,18 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ItemsFmRouteImport } from './routes/items-fm'
 import { Route as PrixRouteImport } from './routes/prix'
 import { Route as RunesRouteImport } from './routes/runes'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ItemsFmRoute = ItemsFmRouteImport.update({
+  id: '/items-fm',
+  path: '/items-fm',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PrixRoute = PrixRouteImport.update({
@@ -31,30 +37,34 @@ const RunesRoute = RunesRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/items-fm': typeof ItemsFmRoute
   '/prix': typeof PrixRoute
   '/runes': typeof RunesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/items-fm': typeof ItemsFmRoute
   '/prix': typeof PrixRoute
   '/runes': typeof RunesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/items-fm': typeof ItemsFmRoute
   '/prix': typeof PrixRoute
   '/runes': typeof RunesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/prix' | '/runes'
+  fullPaths: '/' | '/items-fm' | '/prix' | '/runes'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/prix' | '/runes'
-  id: '__root__' | '/' | '/prix' | '/runes'
+  to: '/' | '/items-fm' | '/prix' | '/runes'
+  id: '__root__' | '/' | '/items-fm' | '/prix' | '/runes'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ItemsFmRoute: typeof ItemsFmRoute
   PrixRoute: typeof PrixRoute
   RunesRoute: typeof RunesRoute
 }
@@ -66,6 +76,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/items-fm': {
+      id: '/items-fm'
+      path: '/items-fm'
+      fullPath: '/items-fm'
+      preLoaderRoute: typeof ItemsFmRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/prix': {
@@ -87,6 +104,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ItemsFmRoute: ItemsFmRoute,
   PrixRoute: PrixRoute,
   RunesRoute: RunesRoute,
 }
