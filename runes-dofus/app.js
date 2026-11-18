@@ -708,7 +708,7 @@ async function processOcrImage(file) {
     }
 
     const price = matchedRune ? getOcrApplyPrice(result) : marketPrice;
-    if (target && price && (matchedRune || !result.warnings?.length)) applyOcrPrice(target, price);
+    if (target && price && !result.warnings?.length) applyOcrPrice(target, price);
   } catch (error) {
     if (token !== ocrRequestToken) return false;
     state.ocr.result = null;
@@ -1387,6 +1387,19 @@ function selectTool(selectedTab) {
   }
 }
 
+// Prices are saved on change, not on every keystroke, so a half-typed value is never stored or wiped.
+function bindPriceTableInputs(table, selector) {
+  table.addEventListener("change", (event) => {
+    if (event.target.matches(selector)) commitMarketInput(event.target, event.target.dataset.id);
+  });
+  table.addEventListener("input", (event) => {
+    if (event.target.matches(selector)) event.target.setCustomValidity("");
+  });
+  table.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" && event.target.matches(selector)) event.target.blur();
+  });
+}
+
 function bindEvents() {
   document.addEventListener("click", (event) => {
     const button = event.target.closest("[data-copy-name]");
@@ -1540,22 +1553,13 @@ function bindEvents() {
     renderItemFinder();
   });
   $("#findItemsBtn").addEventListener("click", searchItemCandidates);
-  $("#runeTable").addEventListener("input", (event) => {
-    if (!event.target.matches(".price-input")) return;
-    updatePrice("prices", event.target.dataset.id, parsePrice(event.target.value));
-  });
-  $("#itemTable").addEventListener("input", (event) => {
-    if (!event.target.matches(".item-price-input")) return;
-    updatePrice("itemPrices", event.target.dataset.id, parsePrice(event.target.value));
-  });
+  bindPriceTableInputs($("#runeTable"), ".price-input");
+  bindPriceTableInputs($("#itemTable"), ".item-price-input");
   $("#eklameTargetSelect").addEventListener("change", (event) => {
     state.eklameTargetId = event.target.value;
     renderEklameTool();
   });
-  $("#eklameTable").addEventListener("input", (event) => {
-    if (!event.target.matches(".eklame-price-input")) return;
-    updatePrice("eklamePrices", event.target.dataset.id, parsePrice(event.target.value));
-  });
+  bindPriceTableInputs($("#eklameTable"), ".eklame-price-input");
   $("#exportBtn").addEventListener("click", exportPrices);
   $("#importBtn").addEventListener("click", () => $("#importFile").click());
   $("#importFile").addEventListener("change", (event) => {

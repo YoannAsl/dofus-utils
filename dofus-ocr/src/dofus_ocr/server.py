@@ -35,15 +35,7 @@ class RunesOcrHandler(SimpleHTTPRequestHandler):
         if self.path.split("?", 1)[0] == CAPTURES_PATH:
             self.send_header("Cache-Control", "no-store")
             self.send_header("X-Content-Type-Options", "nosniff")
-        else:
-            self.send_header("Access-Control-Allow-Origin", "*")
-            self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-            self.send_header("Access-Control-Allow-Headers", "Content-Type")
         super().end_headers()
-
-    def do_OPTIONS(self) -> None:
-        self.send_response(204)
-        self.end_headers()
 
     def do_GET(self) -> None:
         path, _, query = self.path.partition("?")
