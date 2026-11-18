@@ -3,9 +3,6 @@ const BRISAGE_STORAGE_KEY = "dofus-brisage-log-v1";
 const brisage = {
   entries: [],
   item: null,
-  results: [],
-  searchToken: 0,
-  searchTimer: null,
 };
 
 function loadBrisageEntries() {
@@ -144,9 +141,6 @@ function formatMissing(missing) {
 
 function selectBrisageItem(item) {
   brisage.item = item;
-  brisage.results = [];
-  $("#brisageItemResults").replaceChildren();
-  $("#brisageItemResults").hidden = true;
   $("#brisageItemSearch").value = marketItemName(item);
   const price = marketPriceOf(item.id);
   if (price !== null) $("#brisageUnitCost").value = price;
@@ -156,43 +150,68 @@ function selectBrisageItem(item) {
   $("#brisageQuantity").focus();
 }
 
-function queueBrisageItemSearch() {
-  clearTimeout(brisage.searchTimer);
-  brisage.searchToken++;
-  brisage.item = null;
-  $("#brisageSelectedItem").replaceChildren();
-  brisage.searchTimer = setTimeout(searchBrisageItems, 250);
-}
-
-async function searchBrisageItems() {
-  const token = ++brisage.searchToken;
-  const list = $("#brisageItemResults");
-  const pattern = marketNamePattern($("#brisageItemSearch").value.trim().slice(0, 120));
-  if (!pattern) {
+// Debounced DofusDB search over FM equipment types, shared by the calculator and the log form.
+function bindEquipmentSearch(input, list, onSelect) {
+  const search = { token: 0, timer: null, results: [] };
+  const close = () => {
+    search.token++;
     list.hidden = true;
-    return;
+    list.replaceChildren();
+  };
+
+  async function run() {
+    const token = ++search.token;
+    const pattern = marketNamePattern(input.value.trim().slice(0, 120));
+    if (!pattern) {
+      close();
+      return;
+    }
+    list.hidden = false;
+    list.innerHTML = `<p class="brisage-search-status">Recherche…</p>`;
+    try {
+      const url = marketQuery("items", MARKET_ITEM_FIELDS);
+      url.searchParams.set("$limit", 8);
+      url.searchParams.set("$sort[level]", "-1");
+      url.searchParams.set("slug.fr[$regex]", pattern);
+      for (const typeId of FM_JOB_GROUPS[0].typeIds) url.searchParams.append("typeId[$in][]", typeId);
+      const { data } = await fetchMarketData(url);
+      if (token !== search.token) return;
+      search.results = data;
+      list.innerHTML = data.length
+        ? data.map((item) => `
+          <button type="button" class="market-item-button market-item-label" data-equipment-id="${Number(item.id)}">
+            ${marketItemIcon(item)}<span>${escapeHtml(marketItemName(item))}</span>
+            <small class="rune-meta">Niv. ${escapeHtml(item.level ?? "–")}</small>
+          </button>`).join("")
+        : `<p class="brisage-search-status">Aucun équipement trouvé.</p>`;
+    } catch {
+      if (token === search.token) list.innerHTML = `<p class="brisage-search-status">Catalogue DofusDB indisponible.</p>`;
+    }
   }
-  list.hidden = false;
-  list.innerHTML = `<p class="brisage-search-status">Recherche…</p>`;
-  try {
-    const url = marketQuery("items", MARKET_ITEM_FIELDS);
-    url.searchParams.set("$limit", 8);
-    url.searchParams.set("$sort[level]", "-1");
-    url.searchParams.set("slug.fr[$regex]", pattern);
-    for (const typeId of FM_JOB_GROUPS[0].typeIds) url.searchParams.append("typeId[$in][]", typeId);
-    const { data } = await fetchMarketData(url);
-    if (token !== brisage.searchToken) return;
-    brisage.results = data;
-    list.innerHTML = data.length
-      ? data.map((item) => `
-        <button type="button" class="market-item-button market-item-label" data-brisage-item="${Number(item.id)}">
-          ${marketItemIcon(item)}<span>${escapeHtml(marketItemName(item))}</span>
-          <small class="rune-meta">Niv. ${escapeHtml(item.level ?? "–")}</small>
-        </button>`).join("")
-      : `<p class="brisage-search-status">Aucun équipement trouvé.</p>`;
-  } catch {
-    if (token === brisage.searchToken) list.innerHTML = `<p class="brisage-search-status">Catalogue DofusDB indisponible.</p>`;
-  }
+
+  input.addEventListener("input", () => {
+    clearTimeout(search.timer);
+    search.token++;
+    search.timer = setTimeout(run, 250);
+  });
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") close();
+    if (event.key === "Enter") {
+      event.preventDefault();
+      list.querySelector("[data-equipment-id]")?.click();
+    }
+  });
+  list.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-equipment-id]");
+    const item = search.results.find((entry) => String(entry.id) === button?.dataset.equipmentId);
+    if (!item) return;
+    close();
+    input.value = marketItemName(item);
+    onSelect(item);
+  });
+  document.addEventListener("click", (event) => {
+    if (!list.hidden && !list.contains(event.target) && event.target !== input) close();
+  });
 }
 
 function resetBrisageForm() {
@@ -277,11 +296,10 @@ function bindBrisageEvents() {
   $("#brisageView").addEventListener("error", (event) => {
     if (event.target.matches("img.item-icon")) event.target.hidden = true;
   }, true);
-  $("#brisageItemSearch").addEventListener("input", queueBrisageItemSearch);
-  $("#brisageItemResults").addEventListener("click", (event) => {
-    const button = event.target.closest("[data-brisage-item]");
-    const item = brisage.results.find((entry) => String(entry.id) === button?.dataset.brisageItem);
-    if (item) selectBrisageItem(item);
+  bindEquipmentSearch($("#brisageItemSearch"), $("#brisageItemResults"), selectBrisageItem);
+  $("#brisageItemSearch").addEventListener("input", () => {
+    brisage.item = null;
+    $("#brisageSelectedItem").replaceChildren();
   });
   $("#brisageAddRune").addEventListener("click", addBrisageRuneRow);
   $("#brisageRunes").addEventListener("click", (event) => {

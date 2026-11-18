@@ -186,3 +186,46 @@ function calculateBreakResult(entry, readRunePrice) {
   const profit = value - cost;
   return { cost, value, missing, profit, roi: cost ? profit / cost : null };
 }
+
+// Shattering formulas follow DoFocus: each line weighs (3 × jet × weight × level) / (200 × rune value) + 1,
+// a negative line weighs (3 × jet) / (200 × rune value) + 1. Runes = line weight × coefficient / rune weight.
+// Focusing a line adds half of every other line's weight to it; exotic lines can't be focused.
+function shatterWeight(jet, weight, level, runeValue) {
+  return jet < 0
+    ? (3 * jet) / (200 * runeValue) + 1
+    : (3 * jet * weight * level) / (200 * runeValue) + 1;
+}
+
+function calculateShatter({ level, coefficient, lines }) {
+  const factor = coefficient / 100;
+  const pools = lines.map((line) => shatterWeight(line.negative ? -line.jet : line.jet, line.weight, level, line.runeValue));
+  const totalPool = pools.reduce((sum, pool) => sum + pool, 0);
+  const kamas = (runeCount, price) => (runeCount === null || price === null ? null : Math.round(runeCount * price));
+
+  const rows = lines.map((line, index) => {
+    const runesWithoutFocus = line.negative ? null : round2((pools[index] * factor) / line.weight);
+    const runesWithFocus = line.negative || line.exo
+      ? null
+      : round2(((pools[index] + 0.5 * (totalPool - pools[index])) * factor) / line.weight);
+    return {
+      runesWithoutFocus,
+      kamasWithoutFocus: kamas(runesWithoutFocus, line.price),
+      runesWithFocus,
+      kamasWithFocus: kamas(runesWithFocus, line.price),
+    };
+  });
+
+  const missing = lines.filter((line) => !line.negative && line.price === null).length;
+  const totalWithoutFocus = missing ? null : rows.reduce((sum, row) => sum + (row.kamasWithoutFocus || 0), 0);
+  const options = missing ? [] : [
+    { index: null, value: totalWithoutFocus },
+    ...rows.flatMap((row, index) => (row.kamasWithFocus === null ? [] : [{ index, value: row.kamasWithFocus }])),
+  ].sort((a, b) => b.value - a.value);
+
+  return { rows, missing, totalWithoutFocus, options, best: options[0] || null };
+}
+
+// Coefficient at which the best result exactly pays back the item cost, assuming runes scale linearly with it.
+function calculateBreakEvenCoefficient(cost, coefficient, bestValue) {
+  return cost > 0 && coefficient > 0 && bestValue > 0 ? Math.round((cost * coefficient) / bestValue) : null;
+}

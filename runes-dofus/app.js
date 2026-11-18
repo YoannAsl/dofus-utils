@@ -471,6 +471,7 @@ function renderPriceViews(group, id) {
   if (!group || priceStore.groupForItem(id) === group) renderMarketPrices(id);
   if (!group || group === "itemPrices") renderBreedingPrices();
   if (!group || group === "prices") renderBrisageLog();
+  if (!group || group !== "eklamePrices") renderShatterValues();
 
   if (activeSelector && !active.isConnected) {
     const next = document.querySelector(activeSelector);
@@ -1315,6 +1316,7 @@ function exportPrices() {
     source: "Atelier Dofus",
     ...priceStore.snapshot(),
     brisages: brisage.entries,
+    brisageCoefficients: shatterSim.coefficients,
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
@@ -1332,6 +1334,7 @@ function importPrices(file) {
       const payload = JSON.parse(String(reader.result));
       priceStore.merge(payload);
       mergeBrisageEntries(payload.brisages);
+      mergeShatterCoefficients(payload.brisageCoefficients);
       showPriceSaved();
       renderPriceViews();
     } catch {
@@ -1585,6 +1588,7 @@ bindEvents();
 bindMarketEvents();
 bindBreedingEvents();
 bindBrisageEvents();
+bindShatterCalculatorEvents();
 renderPriceViews();
 renderOcrPanel();
 renderMarketOcrTarget();

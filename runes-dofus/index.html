@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Atelier Dofus</title>
-    <link rel="stylesheet" href="styles.css?v=9">
+    <link rel="stylesheet" href="styles.css?v=10">
   </head>
   <body>
     <main class="app-shell">
@@ -438,6 +438,95 @@
       <section id="brisageView" class="workspace" role="tabpanel" aria-labelledby="brisageTab" hidden>
         <div class="finder-header">
           <div>
+            <h2>Rentabilité du brisage</h2>
+            <p>Choisis un objet pour estimer les runes obtenues avec et sans focus, à partir de tes prix de runes.</p>
+          </div>
+        </div>
+
+        <section class="market-detail brisage-sim" aria-label="Calculateur de brisage">
+          <div class="brisage-sim-search">
+            <div class="field brisage-item-field">
+              <label for="brisageSimSearch">Objet à briser</label>
+              <input id="brisageSimSearch" type="search" placeholder="Bottes Lunaires, Gelano…" autocomplete="off">
+              <div id="brisageSimResults" class="brisage-item-results" hidden></div>
+            </div>
+            <p id="brisageSimStatus" class="finder-status" role="status"></p>
+          </div>
+
+          <div id="brisageSimDetail" hidden>
+            <div class="brisage-sim-head">
+              <div id="brisageSimItem" class="market-item-label brisage-sim-item"></div>
+              <label class="field compact">
+                <span>Coefficient (%)</span>
+                <input id="brisageSimCoef" type="text" inputmode="decimal" autocomplete="off">
+              </label>
+              <label class="field">
+                <span>Prix de l’objet (k)</span>
+                <input id="brisageSimPrice" type="text" inputmode="numeric" autocomplete="off" placeholder="Prix">
+              </label>
+              <button id="brisageSimRecord" type="button" class="icon-button">Noter ce brisage</button>
+            </div>
+
+            <div class="finder-metrics brisage-sim-metrics" aria-label="Résultat du brisage">
+              <article>
+                <span class="panel-label">Meilleur résultat</span>
+                <strong id="brisageSimBest">–</strong>
+                <span id="brisageSimBestMeta"></span>
+              </article>
+              <article>
+                <span class="panel-label">Bénéfice</span>
+                <strong id="brisageSimProfit">–</strong>
+                <span id="brisageSimProfitMeta"></span>
+              </article>
+              <article>
+                <span class="panel-label">Seuil de rentabilité</span>
+                <strong id="brisageSimBreakEven">–</strong>
+                <span id="brisageSimBreakEvenMeta"></span>
+              </article>
+            </div>
+
+            <div id="brisageSimPresets" class="brisage-sim-presets" role="group" aria-label="Jets">
+              <span class="panel-label">Jets</span>
+              <button type="button" class="icon-button" data-jet-preset="min">Min</button>
+              <button type="button" class="icon-button" data-jet-preset="mid">Moyen</button>
+              <button type="button" class="icon-button" data-jet-preset="max">Max</button>
+            </div>
+
+            <div class="item-table-wrap" role="region" aria-label="Runes par caractéristique" tabindex="0">
+              <table class="brisage-sim-table">
+                <thead>
+                  <tr class="brisage-focus-groups">
+                    <td colspan="4"></td>
+                    <th scope="colgroup" colspan="2">Sans focus</th>
+                    <th scope="colgroup" colspan="2">Avec focus</th>
+                  </tr>
+                  <tr>
+                    <th scope="col">Caractéristique</th>
+                    <th scope="col">Jet</th>
+                    <th scope="col">Rune</th>
+                    <th scope="col">Prix (k/u)</th>
+                    <th scope="col" class="num">Runes</th>
+                    <th scope="col" class="num brisage-focus-split">Kamas</th>
+                    <th scope="col" class="num">Runes</th>
+                    <th scope="col" class="num">Kamas</th>
+                  </tr>
+                </thead>
+                <tbody id="brisageSimTable"></tbody>
+                <tfoot>
+                  <tr>
+                    <th scope="row" colspan="5">Total kamas sans focus</th>
+                    <td id="brisageSimTotal" class="num" colspan="3"></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+            <button id="brisageSimAddExo" type="button" class="icon-button brisage-add-exo">+ Exo</button>
+            <p class="brisage-sim-note">Les runes sont comptées en runes simples, avec la formule de DoFocus. Le focus ajoute à la caractéristique choisie la moitié du poids des autres. Les meilleurs résultats sont numérotés de 1 à 3.</p>
+          </div>
+        </section>
+
+        <div class="finder-header brisage-log-header">
+          <div>
             <h2>Suivi des brisages</h2>
             <p>Note chaque objet brisé et les runes obtenues. La valeur des runes suit les prix saisis dans Prix des runes.</p>
           </div>
@@ -521,11 +610,12 @@
 
     <script src="runes-data.js"></script>
     <script src="prices.js?v=2"></script>
-    <script src="pricing.js?v=3"></script>
+    <script src="pricing.js?v=4"></script>
     <script src="market.js?v=7"></script>
     <script src="breeding-data.js"></script>
     <script src="breeding.js?v=3"></script>
-    <script src="brisage.js?v=1"></script>
-    <script src="app.js?v=13"></script>
+    <script src="brisage.js?v=2"></script>
+    <script src="brisage-calculator.js?v=1"></script>
+    <script src="app.js?v=14"></script>
   </body>
 </html>

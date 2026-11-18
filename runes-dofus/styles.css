@@ -850,6 +850,213 @@ tbody tr.is-ocr-updated {
 }
 
 
+.brisage-sim {
+  margin-bottom: 24px;
+}
+
+.brisage-sim-search {
+  display: grid;
+  grid-template-columns: minmax(0, 420px) minmax(0, 1fr);
+  gap: 8px 16px;
+  align-items: end;
+}
+
+.brisage-sim-search .finder-status {
+  margin: 0 0 10px;
+  text-align: left;
+}
+
+.brisage-sim-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 130px 180px auto;
+  gap: 8px 12px;
+  align-items: end;
+  margin-top: 16px;
+}
+
+.brisage-sim-item {
+  align-self: center;
+  font-size: 1.0625rem;
+}
+
+.brisage-sim-item .rune-meta {
+  display: block;
+}
+
+.brisage-sim-metrics {
+  margin-bottom: 12px;
+}
+
+.brisage-sim-presets {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.brisage-sim-presets .panel-label {
+  margin: 0 4px 0 0;
+}
+
+.brisage-sim-presets .icon-button {
+  min-height: 30px;
+  padding-block: 0;
+}
+
+.brisage-sim-table {
+  min-width: 940px;
+}
+
+.brisage-sim-table th[scope="row"] {
+  color: var(--ink);
+  font-size: inherit;
+  white-space: nowrap;
+}
+
+.brisage-focus-groups th {
+  text-align: center;
+  border-bottom: 2px solid var(--line-strong);
+}
+
+.brisage-focus-groups td {
+  border: 0;
+  background: var(--bg);
+}
+
+.brisage-focus-split {
+  border-right: 1px solid var(--line-strong);
+}
+
+.brisage-sim-table tr.is-negative th[scope="row"] {
+  color: var(--red);
+}
+
+.brisage-sim-table tr.is-exo {
+  background: var(--blue-bg);
+}
+
+.brisage-sim-table tfoot th,
+.brisage-sim-table tfoot td {
+  font-weight: 700;
+  text-align: right;
+}
+
+.brisage-sim-table tfoot td {
+  text-align: center;
+}
+
+.brisage-jet {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.brisage-jet .rune-meta {
+  min-width: 2.5em;
+  text-align: center;
+}
+
+.brisage-jet-input {
+  width: 68px;
+  height: 32px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--surface-strong);
+  color: var(--ink);
+  text-align: center;
+}
+
+.brisage-jet-step,
+.brisage-exo-remove {
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--surface-strong);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.brisage-jet-step:hover,
+.brisage-exo-remove:hover {
+  border-color: var(--blue);
+  color: var(--blue);
+}
+
+.brisage-sim-price {
+  width: 96px;
+  height: 32px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--surface-strong);
+  color: var(--ink);
+  padding: 0 8px;
+  text-align: right;
+}
+
+.brisage-sim-price:focus,
+.brisage-jet-input:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(34, 93, 183, 0.14);
+  outline: none;
+}
+
+.brisage-sim-table .rune-icon {
+  width: 28px;
+  height: 28px;
+}
+
+.brisage-exo-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.brisage-exo-select {
+  height: 32px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--surface-strong);
+  color: var(--ink);
+}
+
+[data-rank]:not([data-rank=""]) {
+  color: var(--emerald);
+  font-weight: 700;
+}
+
+[data-rank]:not([data-rank=""])::before {
+  content: attr(data-rank);
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--emerald);
+  color: #fff;
+  font-size: 11px;
+  vertical-align: 1px;
+}
+
+[data-rank="1"] {
+  background: var(--emerald-bg);
+}
+
+.brisage-add-exo {
+  margin-top: 8px;
+}
+
+.brisage-sim-note {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+.brisage-log-header {
+  margin-top: 8px;
+}
+
 .brisage-controls {
   grid-template-columns: minmax(0, 2fr) minmax(90px, 0.6fr) minmax(0, 1fr) minmax(110px, 0.7fr);
   align-items: start;
@@ -967,6 +1174,16 @@ tbody tr.is-ocr-updated {
 }
 
 @media (max-width: 760px) {
+  .brisage-sim-search,
+  .brisage-sim-head {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .brisage-sim-item,
+  .brisage-sim-search .field {
+    grid-column: 1 / -1;
+  }
+
   .brisage-controls {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
