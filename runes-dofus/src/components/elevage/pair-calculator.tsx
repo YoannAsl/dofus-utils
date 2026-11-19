@@ -65,7 +65,7 @@ function NameBuilder({ family }: { family: MountFamily }) {
     <Card>
       <CardHeader>
         <CardTitle>Renommer une monture</CardTitle>
-        <CardDescription>Le nom de 13 lettres à donner en jeu : sexe, couleur, puis les deux parents.</CardDescription>
+        <CardDescription>Le nom de 13 lettres à donner en jeu.</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

@@ -210,7 +210,7 @@ export function planStable({ family: familyId, mounts: names, mode = "genetons",
       const amount = Math.floor(Number(count) || 0);
       if ((family.byId.get(id)?.generation ?? 0) >= 2 && amount > 0) wanted[id] = Math.min(amount, 20);
     }
-    if (Object.keys(wanted).length === 0) throw new PlannerError("Mode succès : aucune couleur à obtenir. Coche les naissances qui te manquent, ou passe en génétons.");
+    if (Object.keys(wanted).length === 0) throw new PlannerError("Mode succès : aucune couleur à obtenir. Décoche les naissances qui te manquent, ou passe en génétons.");
   }
 
   const step = planStep({

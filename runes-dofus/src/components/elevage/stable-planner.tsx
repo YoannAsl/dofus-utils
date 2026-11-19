@@ -105,8 +105,7 @@ function CaptureDrop({ family }: { family: MountFamily }) {
       >
         {reading ? <LoaderCircleIcon className="size-5 animate-spin" aria-hidden /> : <ImageUpIcon className="size-5" aria-hidden />}
         <span className="flex-1">
-          Colle (Ctrl+V) ou dépose des captures de l’étable, filtre <strong className="font-medium text-foreground">Fécondes</strong>. Les lignes vues
-          deux fois au raccord ne comptent qu’une fois.
+          Colle (Ctrl+V) ou dépose des captures de l’étable, filtre <strong className="font-medium text-foreground">Fécondes</strong>.
         </span>
         <Button variant="outline" size="sm" onClick={() => fileInput.current?.click()} disabled={reading}>
           Choisir des captures
@@ -375,8 +374,7 @@ function PlanResults({ family, plan, doneList }: { family: MountFamily; plan: St
           <CardDescription>
             {plan.read} monture{plan.read > 1 ? "s" : ""} lue{plan.read > 1 ? "s" : ""}
             {plan.rejected.length ? `, ${plan.rejected.length} ignorée${plan.rejected.length > 1 ? "s" : ""}` : ""} · {plan.pairings.length} accouplement
-            {plan.pairings.length > 1 ? "s" : ""}, {pending} à faire. Clique un nom pour le copier ; la flèche donne les naissances possibles et le nom
-            du petit. Après les naissances, recapture l’étable et recalcule.
+            {plan.pairings.length > 1 ? "s" : ""}, {pending} à faire. Après les naissances, recapture l’étable et recalcule.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-6">
@@ -397,7 +395,6 @@ function PlanResults({ family, plan, doneList }: { family: MountFamily; plan: St
             <section className="flex flex-col gap-2">
               <h3 className="text-sm font-medium">
                 Dernier accouplement, puis brisage des deux parents
-                <span className="font-normal text-muted-foreground"> · montures en bout de lignée</span>
               </h3>
               <PairingTable family={family} rows={finalRows} done={done} label="Derniers accouplements" />
             </section>
