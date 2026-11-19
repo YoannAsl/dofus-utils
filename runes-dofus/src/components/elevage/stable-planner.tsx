@@ -13,8 +13,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { colourLabel, type MountFamily } from "@/lib/mounts/family";
 import type { ObjectiveMode } from "@/lib/mounts/horizon";
+import { formatChance } from "@/lib/format";
 import { parseMountName } from "@/lib/mounts/names";
-import { birthOutcomes, likelyChild } from "@/lib/mounts/offspring";
+import { birthOutcomes } from "@/lib/mounts/offspring";
 import type { Pairing, StablePlan } from "@/lib/mounts/planner";
 import { cn } from "@/lib/utils";
 import { setImagePasteHandler } from "@/stores/ocr";
@@ -31,12 +32,9 @@ import {
   useStableStore,
 } from "@/stores/stable";
 
-const formatChance = (probability: number) => `${Math.round(probability * 100)} %`;
-
 interface PlanRow {
   pairing: Pairing;
   index: number;
-  targetId: string | null;
 }
 
 /** Les accouplements par génération du petit visé, la plus haute d'abord : c'est là qu'une réussite rapporte le plus. */
@@ -44,18 +42,12 @@ function groupPairings(family: MountFamily, pairings: Pairing[]) {
   const byGeneration = new Map<number, PlanRow[]>();
   const finalRows: PlanRow[] = [];
   pairings.forEach((pairing, index) => {
-    let targetId = pairing.target ?? null;
-    if (!targetId) {
-      const male = parseMountName(pairing.pair[0], family);
-      const female = parseMountName(pairing.pair[1], family);
-      targetId = male && female ? likelyChild(family, male, female) : null;
-    }
-    const row = { pairing, index, targetId };
+    const row = { pairing, index };
     if (pairing.final) {
       finalRows.push(row);
       return;
     }
-    const generation = (targetId && family.byId.get(targetId)?.generation) || 0;
+    const generation = (pairing.target && family.byId.get(pairing.target)?.generation) || 0;
     if (!byGeneration.has(generation)) byGeneration.set(generation, []);
     byGeneration.get(generation)!.push(row);
   });
@@ -63,12 +55,12 @@ function groupPairings(family: MountFamily, pairings: Pairing[]) {
     .sort(([a], [b]) => b - a)
     .map(([generation, rows]) => {
       const counts = new Map<string | null, number>();
-      rows.forEach((row) => counts.set(row.targetId, (counts.get(row.targetId) ?? 0) + 1));
+      rows.forEach(({ pairing }) => counts.set(pairing.target, (counts.get(pairing.target) ?? 0) + 1));
       const targets = [...counts.entries()]
         .map(([id, count]) => ({ id, count, name: id ? colourLabel(family, id) : "?" }))
         .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, "fr"));
       const rank = new Map(targets.map((target, position) => [target.id, position]));
-      rows.sort((a, b) => rank.get(a.targetId)! - rank.get(b.targetId)! || a.index - b.index);
+      rows.sort((a, b) => rank.get(a.pairing.target)! - rank.get(b.pairing.target)! || a.index - b.index);
       return { generation, rows, targets };
     });
   return { groups, finalRows };
@@ -273,7 +265,8 @@ function StableInput({ family }: { family: MountFamily }) {
 
 function PairingRow({ family, row, done }: { family: MountFamily; row: PlanRow; done: boolean }) {
   const [open, setOpen] = useState(false);
-  const { pairing, index, targetId } = row;
+  const { pairing, index } = row;
+  const targetId = pairing.target;
   const male = parseMountName(pairing.pair[0], family);
   const female = parseMountName(pairing.pair[1], family);
   const outcomes = open && male && female ? birthOutcomes(family, male, female) : [];

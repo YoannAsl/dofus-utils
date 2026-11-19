@@ -32,7 +32,7 @@ export interface Pairing {
   /** Couleur que le plan vise. */
   intended?: string;
   /** Couleur que le jeu visera avec ces deux montures. */
-  target?: string | null;
+  target: string | null;
 }
 
 export interface ImpureMount {
@@ -65,12 +65,13 @@ interface ColourStats {
   females: Record<string, number>;
 }
 
-function colourStats(mounts: Mount[]): ColourStats {
+function colourStats<T extends Mount>(mounts: T[], colourOf: (mount: T) => string): ColourStats {
   const counts: Record<string, number> = {};
   const females: Record<string, number> = {};
   for (const mount of mounts) {
-    counts[mount.colourId] = (counts[mount.colourId] ?? 0) + 1;
-    females[mount.colourId] = (females[mount.colourId] ?? 0) + (mount.sex === "F" ? 1 : 0);
+    const colour = colourOf(mount);
+    counts[colour] = (counts[colour] ?? 0) + 1;
+    females[colour] = (females[colour] ?? 0) + (mount.sex === "F" ? 1 : 0);
   }
   return { counts, females };
 }
@@ -103,13 +104,11 @@ function geneticColour(mount: Mount, family: MountFamily, stats: ColourStats) {
 }
 
 /** Potion conseillée : la couleur visée, paire, a trois montures d'un sexe de plus que de l'autre. */
-function potionFor(family: MountFamily, childId: string, counts: Record<string, number>, females: Record<string, number>): Sex | null {
+function potionFor(family: MountFamily, childId: string, { counts, females }: ColourStats): Sex | null {
   const generation = family.byId.get(childId)?.generation;
   if (!generation || generation < 2 || generation % 2 !== 0) return null;
-  const total = Math.max(0, Math.round(counts[childId] ?? 0));
-  if (total <= 0) return null;
-  const female = Math.min(Math.max(0, Math.round(females[childId] ?? 0)), total);
-  const male = total - female;
+  const female = females[childId] ?? 0;
+  const male = (counts[childId] ?? 0) - female;
   if (male - female >= POTION_MARGIN) return "F";
   if (female - male >= POTION_MARGIN) return "M";
   return null;
@@ -194,14 +193,9 @@ export function planStable({ family: familyId, mounts: names, mode = "genetons",
   });
   if (mounts.length === 0) throw new PlannerError("Aucune monture lisible : vérifie les noms.");
 
-  const stats = colourStats(mounts);
+  const stats = colourStats(mounts, (mount) => mount.colourId);
   for (const mount of mounts) mount.geneticId = geneticColour(mount, family, stats);
-  const counts: Record<string, number> = {};
-  const females: Record<string, number> = {};
-  for (const mount of mounts) {
-    counts[mount.geneticId] = (counts[mount.geneticId] ?? 0) + 1;
-    females[mount.geneticId] = (females[mount.geneticId] ?? 0) + (mount.sex === "F" ? 1 : 0);
-  }
+  const geneticStats = colourStats(mounts, (mount) => mount.geneticId);
 
   const success = mode === "success";
   const wanted: Record<string, number> = {};
@@ -213,20 +207,20 @@ export function planStable({ family: familyId, mounts: names, mode = "genetons",
     if (Object.keys(wanted).length === 0) throw new PlannerError("Mode succès : aucune couleur à obtenir. Décoche les naissances qui te manquent, ou passe en génétons.");
   }
 
+  const chance = successChance(2 * PARENT_LEVEL);
   const step = planStep({
     graph: breedingGraph(family.colours),
     mode,
-    chance: successChance(2 * PARENT_LEVEL),
+    chance,
     captureBudget: CAPTURE_BUDGET,
-    counts,
-    females,
+    ...geneticStats,
     missing: wanted,
     avoidObtained: success && avoidObtained,
   });
 
   // Les tentatives qui rapportent le plus de génétons d'abord : elles prennent les montures en premier.
   const genetons = (attempts: number, femaleId: string, maleId: string) =>
-    Math.round(attempts * successChance(2 * PARENT_LEVEL) * (2 ** (family.byId.get(femaleId)!.generation - 1) + 2 ** (family.byId.get(maleId)!.generation - 1)) * 100) / 100;
+    Math.round(attempts * chance * (2 ** (family.byId.get(femaleId)!.generation - 1) + 2 ** (family.byId.get(maleId)!.generation - 1)) * 100) / 100;
   const reproductions = step.reproductions
     .map((reproduction) => ({ ...reproduction, score: genetons(reproduction.attempts, reproduction.femaleId, reproduction.maleId) }))
     .sort((a, b) => b.score - a.score);
@@ -245,7 +239,12 @@ export function planStable({ family: familyId, mounts: names, mode = "genetons",
   };
   const distinctLineages = (list: PlannedMount[]) => {
     const seen = new Set<string>();
-    return list.filter((mount) => !seen.has(lineageKey(mount)) && (seen.add(lineageKey(mount)), true));
+    return list.filter((mount) => {
+      const key = lineageKey(mount);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
   };
 
   const pairings: Pairing[] = [];
@@ -273,7 +272,7 @@ export function planStable({ family: familyId, mounts: names, mode = "genetons",
       femalesLeft.splice(femalesLeft.indexOf(female), 1);
       pairings.push({
         pair: [male.code, female.code],
-        potion: potionFor(family, reproduction.childId, counts, females),
+        potion: potionFor(family, reproduction.childId, geneticStats),
         final: false,
         intended: reproduction.childId,
         target: childOf(male, female),
@@ -286,13 +285,13 @@ export function planStable({ family: familyId, mounts: names, mode = "genetons",
   for (const { male, female } of pairRichLeftovers(leftovers, family, stats)) {
     paired.add(male);
     paired.add(female);
-    pairings.push({ pair: [male.code, female.code], potion: null, final: false });
+    pairings.push({ pair: [male.code, female.code], potion: null, final: false, target: childOf(male, female) });
   }
   for (const [male, female] of pairLineageEnds(
     leftovers.filter((mount) => !paired.has(mount)),
     family,
   ))
-    pairings.push({ pair: [male.code, female.code], potion: null, final: true });
+    pairings.push({ pair: [male.code, female.code], potion: null, final: true, target: childOf(male, female) });
 
   // G1 aux parents d'autres couleurs : leurs petits visent moins souvent la bonne couleur.
   const inPairs = new Set(pairings.flatMap((pairing) => pairing.pair));

@@ -43,6 +43,10 @@ interface StableState {
 
 const emptyFamily = (): FamilyStable => ({ draft: "", plan: null, done: [], mode: "genetons", avoidObtained: true, obtained: [] });
 
+/** Un plan enregistré par une version qui ne donnait pas le petit visé de chaque accouplement est à recalculer. */
+const isStoredPlan = (plan: unknown): plan is StablePlan =>
+  Boolean(plan && typeof plan === "object" && Array.isArray((plan as StablePlan).pairings) && (plan as StablePlan).pairings.every((pairing) => "target" in pairing));
+
 function loadFamilies(): Record<MountFamilyId, FamilyStable> {
   const stored = readStorage(STORAGE_KEY);
   const families = Object.fromEntries(MOUNT_FAMILY_IDS.map((id) => [id, emptyFamily()])) as Record<MountFamilyId, FamilyStable>;
@@ -52,7 +56,7 @@ function loadFamilies(): Record<MountFamilyId, FamilyStable> {
     const entry = value as Partial<FamilyStable>;
     families[id] = {
       draft: typeof entry.draft === "string" ? entry.draft : "",
-      plan: entry.plan && typeof entry.plan === "object" && Array.isArray(entry.plan.pairings) ? entry.plan : null,
+      plan: isStoredPlan(entry.plan) ? entry.plan : null,
       done: Array.isArray(entry.done) ? entry.done.filter((index) => Number.isInteger(index)) : [],
       mode: entry.mode === "success" ? "success" : "genetons",
       avoidObtained: entry.avoidObtained !== false,
