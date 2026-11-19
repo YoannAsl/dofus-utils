@@ -150,7 +150,7 @@ function ItemsPage() {
     .map((candidate) => ({ candidate, economy: calculateItemEconomy(candidate, acquisition, readPrice(candidate.id)) }))
     .sort(SORTERS[sort]);
 
-  let status = "Recherche prête.";
+  let status = "";
   if (loading) status = progress || `Chargement ${group.label}...`;
   else if (searched && candidates.isError) status = "Chargement DofusDB impossible.";
   else if (searched && candidates.data) status = `${all.length} items compatibles pour ${rune.name}.`;
@@ -236,15 +236,7 @@ function ItemsPage() {
         <Metric
           label="Candidats"
           value={loading ? "..." : searched ? `${visible.length} / ${all.length}` : "0"}
-          meta={
-            loading
-              ? "Chargement DofusDB."
-              : searched
-                ? visible.length > ITEM_RESULT_LIMIT
-                  ? `Affichage des ${ITEM_RESULT_LIMIT} meilleurs.`
-                  : "Résultats filtrés."
-                : "Aucune recherche lancée."
-          }
+          meta={!loading && searched && visible.length > ITEM_RESULT_LIMIT ? `Affichage des ${ITEM_RESULT_LIMIT} meilleurs.` : undefined}
         />
       </MetricGrid>
 
@@ -302,7 +294,7 @@ function ItemsPage() {
                     {!economy.itemPrice
                       ? `Potentiel théorique: ${formatQuantity(candidate.runeUses)} ${rune.name} avant de vider ${candidate.maxValue} ${rune.effect.unit}.`
                       : !acquisition.best
-                        ? `Prix item saisi: ${formatMoney(economy.itemPrice)} kamas. Renseigne le coût de la rune pour comparer le total.`
+                        ? "Renseigne le coût de la rune pour comparer le total."
                         : `${formatMoney(economy.itemPrice)} k item + ${formatMoney(economy.runeCost!)} k runes pour ${formatDensity(candidate.potentialDensity)} densité théorique.`}
                   </TableCell>
                 </TableRow>

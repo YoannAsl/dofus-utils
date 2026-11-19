@@ -32,7 +32,7 @@ function BreedingPage() {
     <>
       <PageHeader
         title="Comparer les carburants d’élevage"
-        description="Saisis les prix unitaires de l’HDV pour comparer le coût de 10 000 points de recharge. Les badges se basent sur ce coût. Le coût du palier compte les unités entières nécessaires pour passer du plafond précédent au plafond du carburant."
+        description="Le coût du palier compte les unités entières pour passer du plafond précédent à celui du carburant."
         aside={
           <a className="underline underline-offset-4" href="https://dofusdb.fr/fr/database/items?types=326&sortBy=-id" target="_blank" rel="noreferrer">
             DofusDB

@@ -90,7 +90,7 @@ function MarketPage() {
     <>
       <PageHeader
         title="Prix HDV et coûts de craft"
-        description="Clique sur un nom pour voir le prix et la recette. Utilise Copier pour copier le nom."
+        description="Clique sur un nom pour voir le prix et la recette."
         aside={<span role="status">{status}</span>}
       />
       <div className="flex flex-wrap items-end gap-3">

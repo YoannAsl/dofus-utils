@@ -143,7 +143,7 @@ async function assertServerReady() {
   } catch {
     throw new Error("serveur OCR indisponible; relance start-runes-ocr.ps1");
   }
-  if (!response.ok) throw new Error("serveur OCR obsolete; arrete l'ancien serveur puis relance start-runes-ocr.ps1");
+  if (!response.ok) throw new Error("serveur OCR obsolète; arrête l'ancien serveur puis relance start-runes-ocr.ps1");
   const payload = await readJsonResponse(response);
   if (!payload?.ok) throw new Error("serveur OCR invalide; relance start-runes-ocr.ps1");
 }

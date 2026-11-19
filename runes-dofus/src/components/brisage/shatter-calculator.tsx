@@ -218,14 +218,14 @@ export function ShatterCalculator() {
               <Metric
                 label="Bénéfice"
                 value={best && cost !== null ? <Gain value={best.value - cost} /> : "–"}
-                meta={cost === null ? "Renseigne le prix de l’objet." : `Pour un objet à ${formatMoney(cost)} k.`}
+                meta={cost === null ? "Renseigne le prix de l’objet." : undefined}
               />
               <Metric
                 label="Seuil de rentabilité"
                 value={breakEven === null ? "–" : `${formatQuantity(breakEven)} %`}
                 meta={
                   breakEven === null
-                    ? "Coefficient minimum pour rentrer dans tes frais."
+                    ? undefined
                     : coefficient! >= breakEven
                       ? "Le coefficient actuel est rentable."
                       : "Le coefficient actuel n’est pas rentable."
@@ -378,10 +378,6 @@ export function ShatterCalculator() {
                 Exo
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Chaque ligne donne un poids de (3 × jet × poids de la caractéristique × niveau) / 200 + 1, converti en runes simples selon le coefficient. Le
-              focus ajoute à la caractéristique choisie la moitié du poids des autres lignes positives. Les meilleurs résultats sont numérotés de 1 à 3.
-            </p>
           </>
         ) : null}
       </CardContent>

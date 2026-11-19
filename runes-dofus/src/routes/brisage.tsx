@@ -12,7 +12,6 @@ function BrisagePage() {
     <>
       <PageHeader
         title="Rentabilité du brisage"
-        description="Choisis un objet pour estimer les runes obtenues avec et sans focus, à partir de tes prix de runes."
       />
       <ShatterCalculator />
       <div className="mt-4 flex flex-col gap-5">
