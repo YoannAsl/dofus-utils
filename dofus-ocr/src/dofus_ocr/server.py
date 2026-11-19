@@ -19,6 +19,9 @@ from . import windows_ocr
 
 MAX_UPLOAD_BYTES = 25 * 1024 * 1024
 CAPTURES_PATH = "/api/captures"
+OCR_PATH = "/api/ocr"
+# Raw OCR lines, for captures that are not auction popups (the mount stable list).
+OCR_TEXT_PATH = "/api/ocr/text"
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 
 
@@ -66,15 +69,17 @@ class RunesOcrHandler(SimpleHTTPRequestHandler):
         path = self.path.split("?", 1)[0]
         if path == CAPTURES_PATH and not self._allow_capture_request():
             return
-        if path not in ("/api/ocr", CAPTURES_PATH):
+        if path not in (OCR_PATH, OCR_TEXT_PATH, CAPTURES_PATH):
             self.send_error(404, "Not found")
             return
 
         try:
             if path == CAPTURES_PATH:
                 self._receive_capture()
+            elif path == OCR_TEXT_PATH:
+                self._send_json(ocr_text_payload(self._run_ocr_upload(lambda payload, _image_path: payload)))
             else:
-                self._handle_ocr_upload()
+                self._send_json(self._run_ocr_upload(lambda payload, image_path: result_to_dict(parse_auction_ocr(payload, source_image=image_path))))
         except ValueError as exc:
             self._send_json({"error": str(exc), "server": build_health_payload()}, status=400)
         except Exception as exc:
@@ -148,7 +153,8 @@ class RunesOcrHandler(SimpleHTTPRequestHandler):
             raise ValueError("incomplete image body")
         return image_bytes
 
-    def _handle_ocr_upload(self) -> None:
+    def _run_ocr_upload(self, read):
+        """Runs Windows OCR on the uploaded image and returns read(ocr_payload, image_path)."""
         content_type = self.headers.get("Content-Type", "application/octet-stream").split(";", 1)[0]
         content_type = content_type.strip().lower()
         if content_type != "application/octet-stream" and not content_type.startswith("image/"):
@@ -165,9 +171,7 @@ class RunesOcrHandler(SimpleHTTPRequestHandler):
             ocr_payload = run_windows_ocr(image_path)
             if not isinstance(ocr_payload, dict):
                 raise RuntimeError("Windows OCR returned no JSON payload")
-            result = parse_auction_ocr(ocr_payload, source_image=image_path)
-
-        self._send_json(result_to_dict(result))
+            return read(ocr_payload, image_path)
 
     def _send_json(self, payload: dict, status: int = 200) -> None:
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
@@ -176,6 +180,19 @@ class RunesOcrHandler(SimpleHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
+
+
+def ocr_text_payload(ocr_payload: dict) -> dict:
+    """Keeps the text of each OCR line and its words with their boxes."""
+    lines = []
+    for line in ocr_payload.get("lines") or []:
+        words = [
+            {"text": str(word.get("text", "")), "box": word.get("box")}
+            for word in line.get("words") or []
+            if isinstance(word, dict)
+        ]
+        lines.append({"text": str(line.get("text", "")), "words": words})
+    return {"text": str(ocr_payload.get("text", "")), "lines": lines}
 
 
 def build_parser() -> argparse.ArgumentParser:

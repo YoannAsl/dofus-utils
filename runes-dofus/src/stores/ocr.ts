@@ -48,6 +48,21 @@ let requestToken = 0;
 let deferredCaptureId: string | null = null;
 let openMarket: () => void = () => {};
 
+let imagePasteHandler: ((file: File | Blob) => void) | null = null;
+
+/** Lets a page take pasted images for itself (the stable reader) instead of the price OCR. */
+export function setImagePasteHandler(handler: (file: File | Blob) => void) {
+  imagePasteHandler = handler;
+  return () => {
+    if (imagePasteHandler === handler) imagePasteHandler = null;
+  };
+}
+
+export function handlePastedImage(file: File | Blob) {
+  if (imagePasteHandler) imagePasteHandler(file);
+  else processOcrImage(file);
+}
+
 /** Registers how to show the catalogue when a capture needs the user to pick its item. */
 export function setOcrMarketNavigator(navigate: () => void) {
   openMarket = navigate;
