@@ -7,12 +7,11 @@ import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOptGroup, NativeSelectOption } from "@/components/ui/native-select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { formatChance } from "@/lib/format";
 import { colourLabel, type MountFamily } from "@/lib/mounts/family";
 import { mountName, parseMountName } from "@/lib/mounts/names";
 import { birthOutcomes } from "@/lib/mounts/offspring";
 import type { Sex } from "@/lib/mounts/types";
-
-const formatChance = (probability: number) => `${Math.round(probability * 100)} %`;
 
 /** Couleurs groupées par génération, pour les listes déroulantes. */
 function useColoursByGeneration(family: MountFamily) {
