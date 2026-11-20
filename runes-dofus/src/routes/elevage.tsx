@@ -1,119 +1,82 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { CopyIcon } from "lucide-react";
-import { copyText, DecisionBadge, ItemIcon, Meta, PageHeader } from "@/components/common";
-import { PriceInput } from "@/components/price-input";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { BREEDING_FUELS } from "@/data/breeding";
-import { calculateBreedingCosts } from "@/lib/breeding";
-import { formatMoney, formatQuantity } from "@/lib/format";
-import { usePriceReader } from "@/stores/prices";
+import { PageHeader } from "@/components/common";
+import { FUEL_CATEGORIES, FuelComparison } from "@/components/elevage/fuel-comparison";
+import { PairCalculator } from "@/components/elevage/pair-calculator";
+import { StablePlanner } from "@/components/elevage/stable-planner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { getMountFamily, isMountFamilyId, MOUNT_FAMILY_IDS } from "@/lib/mounts/family";
+import type { MountFamilyId } from "@/lib/mounts/types";
 
-const CATEGORIES = Object.keys(BREEDING_FUELS);
+const TABS = ["etable", "couples", "carburants"] as const;
+type Tab = (typeof TABS)[number];
+const DEFAULT_FAMILY: MountFamilyId = "dragodinde";
+
+interface ElevageSearch {
+  tab?: Exclude<Tab, "etable">;
+  family?: MountFamilyId;
+  category?: string;
+}
 
 export const Route = createFileRoute("/elevage")({
-  validateSearch: (search: Record<string, unknown>): { category?: string } => ({
-    category: CATEGORIES.includes(String(search.category)) && String(search.category) !== CATEGORIES[0] ? String(search.category) : undefined,
+  validateSearch: (search: Record<string, unknown>): ElevageSearch => ({
+    tab: TABS.includes(search.tab as Tab) && search.tab !== "etable" ? (search.tab as ElevageSearch["tab"]) : undefined,
+    family: isMountFamilyId(search.family) && search.family !== DEFAULT_FAMILY ? search.family : undefined,
+    category: FUEL_CATEGORIES.includes(String(search.category)) && String(search.category) !== FUEL_CATEGORIES[0] ? String(search.category) : undefined,
   }),
   component: BreedingPage,
 });
 
+const DESCRIPTIONS: Record<Tab, string> = {
+  etable: "Les couples à former pour avancer dans l’arbre, et les G1 à capturer.",
+  couples: "Les naissances possibles d’un couple, et le nom à donner à chaque monture.",
+  carburants: "Le coût du palier compte les unités entières pour passer du plafond précédent à celui du carburant.",
+};
+
 function BreedingPage() {
-  const { category = CATEGORIES[0]! } = Route.useSearch();
+  const { tab = "etable", family: familyId = DEFAULT_FAMILY, category = FUEL_CATEGORIES[0]! } = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
-  const readPrice = usePriceReader();
-  const fuels = BREEDING_FUELS[category]!;
-  const rows = calculateBreedingCosts(fuels, readPrice);
+  const family = getMountFamily(familyId);
+  const update = (change: Partial<ElevageSearch>) => navigate({ search: (previous) => ({ ...previous, ...change }), replace: true });
 
   return (
-    <>
+    <Tabs value={tab} onValueChange={(value) => update({ tab: value === "etable" ? undefined : (value as ElevageSearch["tab"]) })} className="gap-5">
       <PageHeader
-        title="Comparer les carburants d’élevage"
-        description="Le coût du palier compte les unités entières pour passer du plafond précédent à celui du carburant."
+        title="Élevage"
+        description={DESCRIPTIONS[tab]}
         aside={
-          <a className="underline underline-offset-4" href="https://dofusdb.fr/fr/database/items?types=326&sortBy=-id" target="_blank" rel="noreferrer">
-            DofusDB
-          </a>
+          tab === "carburants" ? null : (
+            <ToggleGroup
+              type="single"
+              variant="outline"
+              spacing={0}
+              value={familyId}
+              onValueChange={(value) => value && update({ family: value === DEFAULT_FAMILY ? undefined : (value as MountFamilyId) })}
+              aria-label="Famille de montures"
+            >
+              {MOUNT_FAMILY_IDS.map((id) => (
+                <ToggleGroupItem key={id} value={id} className="px-3">
+                  {getMountFamily(id).label}
+                </ToggleGroupItem>
+              ))}
+            </ToggleGroup>
+          )
         }
       />
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <RadioGroup
-          aria-label="Catégorie"
-          value={category}
-          onValueChange={(value) => navigate({ search: { category: value === CATEGORIES[0] ? undefined : value }, replace: true })}
-          className="flex flex-wrap gap-4"
-        >
-          {CATEGORIES.map((name) => (
-            <Label key={name} className="flex items-center gap-2 font-normal">
-              <RadioGroupItem value={name} />
-              {name}
-            </Label>
-          ))}
-        </RadioGroup>
-        <p className="text-sm text-muted-foreground" role="status">
-          {rows.filter((row) => row.costs).length} / {fuels.length} prix renseignés
-        </p>
-      </div>
-
-      <Card className="py-0">
-        <Table aria-label="Comparaison des carburants d’élevage">
-          <TableHeader>
-            <TableRow>
-              <TableHead>Carburant</TableHead>
-              <TableHead className="hidden text-right md:table-cell">Recharge (pts)</TableHead>
-              <TableHead className="hidden text-right md:table-cell">Plafond de jauge (pts)</TableHead>
-              <TableHead>Prix HDV ×1 (kamas)</TableHead>
-              <TableHead className="text-right">Kamas / 10 000 pts</TableHead>
-              <TableHead className="text-right">Coût du palier (kamas)</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.map(({ fuel, costs, isBestOfTier }) => {
-              const recharge = formatQuantity(fuel.recharge);
-              const cap = fuel.cap === null ? null : formatQuantity(fuel.cap);
-              return (
-                <TableRow key={fuel.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <ItemIcon item={fuel} />
-                      <span>
-                        <span className="flex items-center gap-1">
-                          <span className="font-medium whitespace-normal">{fuel.name}</span>
-                          <Button variant="ghost" size="icon-xs" aria-label={`Copier ${fuel.name}`} title="Copier le nom" onClick={() => copyText(fuel.name)}>
-                            <CopyIcon />
-                          </Button>
-                        </span>
-                        <Meta className="md:hidden">
-                          +{recharge} pts · {cap === null ? "Jusqu’au max. de la jauge" : `Jusqu’à ${cap}`}
-                        </Meta>
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="hidden text-right tabular-nums md:table-cell">{recharge}</TableCell>
-                  <TableCell className="hidden text-right tabular-nums md:table-cell">{cap ?? "Max. de la jauge"}</TableCell>
-                  <TableCell>
-                    <PriceInput itemId={fuel.id} aria-label={`Prix HDV de ${fuel.name} (kamas par unité)`} />
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    <span className="flex flex-col items-end gap-1">
-                      {costs ? formatMoney(costs.cost) : "–"}
-                      {isBestOfTier ? (
-                        <DecisionBadge decision={fuel.cap === null ? "craft" : "neutral"}>
-                          {fuel.cap === null ? "Meilleur jusqu’au max." : "Meilleur du palier"}
-                        </DecisionBadge>
-                      ) : null}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">{costs ? formatMoney(costs.fillCost) : "–"}</TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </Card>
-    </>
+      <TabsList aria-label="Outils d’élevage">
+        <TabsTrigger value="etable">Étable</TabsTrigger>
+        <TabsTrigger value="couples">Couples</TabsTrigger>
+        <TabsTrigger value="carburants">Carburants</TabsTrigger>
+      </TabsList>
+      <TabsContent value="etable" className="flex flex-col gap-5">
+        <StablePlanner family={family} />
+      </TabsContent>
+      <TabsContent value="couples" className="flex flex-col gap-5">
+        <PairCalculator family={family} />
+      </TabsContent>
+      <TabsContent value="carburants" className="flex flex-col gap-5">
+        <FuelComparison category={category} onCategoryChange={(value) => update({ category: value === FUEL_CATEGORIES[0] ? undefined : value })} />
+      </TabsContent>
+    </Tabs>
   );
 }

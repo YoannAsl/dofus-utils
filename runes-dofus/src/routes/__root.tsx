@@ -6,7 +6,7 @@ import { PriceTools } from "@/components/price-tools";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { processOcrImage, setOcrMarketNavigator, startCapturePolling } from "@/stores/ocr";
+import { handlePastedImage, setOcrMarketNavigator, startCapturePolling } from "@/stores/ocr";
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   component: RootLayout,
@@ -16,7 +16,7 @@ const TOOLS = [
   { to: "/prix", label: "Prix & crafts" },
   { to: "/runes", label: "Prix des runes" },
   { to: "/items-fm", label: "Items FM" },
-  { to: "/elevage", label: "Carburants d’élevage" },
+  { to: "/elevage", label: "Élevage" },
   { to: "/brisage", label: "Brisage" },
 ] as const;
 
@@ -36,7 +36,7 @@ function RootLayout() {
         firstImageFile(event.clipboardData?.files);
       if (!file) return;
       event.preventDefault();
-      processOcrImage(file);
+      handlePastedImage(file);
     };
     document.addEventListener("paste", onPaste);
     return () => document.removeEventListener("paste", onPaste);

@@ -1,0 +1,310 @@
+{
+ "imagePath": "C:\\Users\\yoann\\AppData\\Local\\Temp\\tmpg5nfbbpb\\x.png",
+ "text": "rions Ies fois suivantes CCN. 1 Pourpre GEN. Emeraude Vous avez obtenu GEN.6 Émeraude et Pourpre Anonyme 0K + 180 XP + 32 0 O ACCOUPLEMENT",
+ "lines": [
+  {
+   "text": "rions Ies fois suivantes",
+   "words": [
+    {
+     "text": "rions",
+     "box": {
+      "x": 0,
+      "y": 26,
+      "width": 69,
+      "height": 26
+     }
+    },
+    {
+     "text": "Ies",
+     "box": {
+      "x": 78,
+      "y": 27,
+      "width": 39,
+      "height": 25
+     }
+    },
+    {
+     "text": "fois",
+     "box": {
+      "x": 126,
+      "y": 26,
+      "width": 53,
+      "height": 26
+     }
+    },
+    {
+     "text": "suivantes",
+     "box": {
+      "x": 188,
+      "y": 26,
+      "width": 140,
+      "height": 26
+     }
+    }
+   ]
+  },
+  {
+   "text": "CCN. 1",
+   "words": [
+    {
+     "text": "CCN.",
+     "box": {
+      "x": 157,
+      "y": 258,
+      "width": 56,
+      "height": 19
+     }
+    },
+    {
+     "text": "1",
+     "box": {
+      "x": 222,
+      "y": 259,
+      "width": 9,
+      "height": 18
+     }
+    }
+   ]
+  },
+  {
+   "text": "Pourpre",
+   "words": [
+    {
+     "text": "Pourpre",
+     "box": {
+      "x": 131,
+      "y": 336,
+      "width": 127,
+      "height": 30
+     }
+    }
+   ]
+  },
+  {
+   "text": "GEN.",
+   "words": [
+    {
+     "text": "GEN.",
+     "box": {
+      "x": 1193,
+      "y": 258,
+      "width": 55,
+      "height": 19
+     }
+    }
+   ]
+  },
+  {
+   "text": "Emeraude",
+   "words": [
+    {
+     "text": "Emeraude",
+     "box": {
+      "x": 1150,
+      "y": 335,
+      "width": 163,
+      "height": 25
+     }
+    }
+   ]
+  },
+  {
+   "text": "Vous avez obtenu",
+   "words": [
+    {
+     "text": "Vous",
+     "box": {
+      "x": 558,
+      "y": 374,
+      "width": 85,
+      "height": 29
+     }
+    },
+    {
+     "text": "avez",
+     "box": {
+      "x": 654,
+      "y": 383,
+      "width": 81,
+      "height": 20
+     }
+    },
+    {
+     "text": "obtenu",
+     "box": {
+      "x": 744,
+      "y": 374,
+      "width": 124,
+      "height": 29
+     }
+    }
+   ]
+  },
+  {
+   "text": "GEN.6",
+   "words": [
+    {
+     "text": "GEN.6",
+     "box": {
+      "x": 667,
+      "y": 782,
+      "width": 93,
+      "height": 24
+     }
+    }
+   ]
+  },
+  {
+   "text": "Émeraude et",
+   "words": [
+    {
+     "text": "Émeraude",
+     "box": {
+      "x": 609,
+      "y": 827,
+      "width": 165,
+      "height": 32
+     }
+    },
+    {
+     "text": "et",
+     "box": {
+      "x": 785,
+      "y": 835,
+      "width": 32,
+      "height": 24
+     }
+    }
+   ]
+  },
+  {
+   "text": "Pourpre",
+   "words": [
+    {
+     "text": "Pourpre",
+     "box": {
+      "x": 648,
+      "y": 875,
+      "width": 130,
+      "height": 32
+     }
+    }
+   ]
+  },
+  {
+   "text": "Anonyme",
+   "words": [
+    {
+     "text": "Anonyme",
+     "box": {
+      "x": 545,
+      "y": 996,
+      "width": 137,
+      "height": 30
+     }
+    }
+   ]
+  },
+  {
+   "text": "0K",
+   "words": [
+    {
+     "text": "0K",
+     "box": {
+      "x": 839,
+      "y": 995,
+      "width": 47,
+      "height": 23
+     }
+    }
+   ]
+  },
+  {
+   "text": "+ 180 XP",
+   "words": [
+    {
+     "text": "+",
+     "box": {
+      "x": 640,
+      "y": 1084,
+      "width": 21,
+      "height": 21
+     }
+    },
+    {
+     "text": "180",
+     "box": {
+      "x": 675,
+      "y": 1078,
+      "width": 64,
+      "height": 29
+     }
+    },
+    {
+     "text": "XP",
+     "box": {
+      "x": 755,
+      "y": 1073,
+      "width": 46,
+      "height": 36
+     }
+    }
+   ]
+  },
+  {
+   "text": "+ 32 0",
+   "words": [
+    {
+     "text": "+",
+     "box": {
+      "x": 654,
+      "y": 1171,
+      "width": 21,
+      "height": 21
+     }
+    },
+    {
+     "text": "32",
+     "box": {
+      "x": 688,
+      "y": 1165,
+      "width": 42,
+      "height": 28
+     }
+    },
+    {
+     "text": "0",
+     "box": {
+      "x": 744,
+      "y": 1163,
+      "width": 38,
+      "height": 36
+     }
+    }
+   ]
+  },
+  {
+   "text": "O ACCOUPLEMENT",
+   "words": [
+    {
+     "text": "O",
+     "box": {
+      "x": 543,
+      "y": 1244,
+      "width": 40,
+      "height": 35
+     }
+    },
+    {
+     "text": "ACCOUPLEMENT",
+     "box": {
+      "x": 602,
+      "y": 1251,
+      "width": 286,
+      "height": 22
+     }
+    }
+   ]
+  }
+ ]
+}

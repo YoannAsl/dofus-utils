@@ -31,6 +31,10 @@ export function formatXpRatio(value: number | null) {
   return numberFormatter.format(value * XP_RATIO_DISPLAY_SCALE);
 }
 
+export function formatChance(probability: number) {
+  return `${Math.round(probability * 100)} %`;
+}
+
 export function plural(count: number, singular: string, pluralForm = `${singular}s`) {
   return count === 1 ? singular : pluralForm;
 }

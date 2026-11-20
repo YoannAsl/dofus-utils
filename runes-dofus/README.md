@@ -42,6 +42,23 @@ Keep the OCR server running and capture the popup with that hotkey. Atelier Dofu
 
 You can also paste a screenshot or choose an image file in the OCR panel.
 
+## Paste names while breeding
+
+On **Élevage › Étable**, under **Noms à coller**, click **Démarrer** and keep the page open. The clipboard then always holds the next name to paste in Dofus, in the plan's order:
+
+1. the male of the first pairing not yet done, to paste into the stable search;
+2. once you paste it in Dofus (Ctrl+V), the female;
+3. when the **Accouplement** window shows « Vous avez obtenu », the baby's 13-letter name, for the name field. The matching plan row gets ticked;
+4. once you paste the baby's name, the male of the next pairing.
+
+**F8** in Dofus skips to the next name and **Shift+F8** goes back one, for a pairing you can't do now. Clicking a name in the plan also makes the queue continue from it.
+
+- While Dofus is the window in front, the OCR server reads it about once a second and watches for Ctrl+V, F8 and Shift+F8. Every key still reaches the game unchanged.
+- Dofus must run windowed or borderless. Exclusive fullscreen can capture black frames.
+- The server only watches while the page listens, and stops 30 seconds after you click **Arrêter** or close the page.
+- With no plan row for those parents, the father is the parent card marked ♂, or the left one if the icon can't be read.
+- It never clicks or types in the game.
+
 Prices, the shattering log and coefficients are stored in the browser under the same keys as earlier versions, so existing data carries over.
 
 ## Develop
