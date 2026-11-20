@@ -300,11 +300,9 @@ def dofus_window() -> tuple[int, int, int, int] | None:
         return None
     pid = wintypes.DWORD()
     user32.GetWindowThreadProcessId(window, ctypes.byref(pid))
-    title_length = user32.GetWindowTextLengthW(window)
-    title = ctypes.create_unicode_buffer(title_length + 1)
-    user32.GetWindowTextW(window, title, title_length + 1)
+    # The process, not the title: the app's own page is « Atelier Dofus » in a browser window.
     process = _process_name(pid.value)
-    if not (process.startswith("dofus") or "dofus" in title.value.lower()) or "launcher" in process:
+    if not process.startswith("dofus") or "launcher" in process:
         return None
 
     rect = wintypes.RECT()
