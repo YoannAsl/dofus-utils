@@ -13,8 +13,9 @@ import re
 import sys
 import time
 import unicodedata
+import uuid
 from collections import deque
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 from threading import Condition, Thread
 from typing import Callable
@@ -86,6 +87,8 @@ class Birth:
     sex: str | None
     # Which parent card shows ♂: the game puts the male on either side.
     father: str | None = None
+    # The card on screen this reading comes from: a later frame that reads the sex icon keeps it.
+    card: str = ""
 
 
 @dataclass(frozen=True)
@@ -466,8 +469,10 @@ class BirthWatcher:
         # A card stays on screen for several frames: count it once, unless it changed in between,
         # or a frame finally reads the sex icon that the first one missed.
         previous = self._card
-        if previous is not None and _same_card(previous, birth) and (previous.sex is not None or birth.sex is None):
+        same = previous is not None and _same_card(previous, birth)
+        if same and (previous.sex is not None or birth.sex is None):
             return
+        birth = replace(birth, card=previous.card if same else uuid.uuid4().hex)
         self._card = birth
         self._add(birth)
 

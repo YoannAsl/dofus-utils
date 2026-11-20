@@ -5,7 +5,7 @@ import { getMountFamily } from "@/lib/mounts/family";
 import { afterPaste, type QueuedName, stepName } from "@/lib/mounts/name-queue";
 import { pairingOrder } from "@/lib/mounts/plan-order";
 import type { MountFamilyId } from "@/lib/mounts/types";
-import { markPairingDone, useStableStore } from "@/stores/stable";
+import { markPairingDone, togglePairingDone, useStableStore } from "@/stores/stable";
 
 const BIRTHS_PATH = "/api/births";
 const CLIPBOARD_PATH = "/api/clipboard";
@@ -102,18 +102,36 @@ async function handleEvent(event: WatchEvent) {
   else await stepQueue(event.type === "next" ? 1 : -1);
 }
 
+/**
+ * Les cartes déjà lues : une 2e lecture de la même carte (le sexe enfin lisible) reprend la 1re.
+ * `ticked` : la ligne que cette naissance a cochée elle-même, à décocher si la 2e lecture en choisit une autre.
+ */
+const seenCards = new Map<string, { logId: number; pairingIndex: number | null; ticked: boolean }>();
+
 async function handleBirth(birth: BirthEvent) {
   const stable = useStableStore.getState().families[family];
   const plan = stable.plan?.family === family ? stable.plan : null;
-  const result = readBirth(getMountFamily(family), birth, plan?.pairings, new Set(stable.done));
-  const entry: LoggedBirth = { id: nextId++, family, reading: null, error: null, copied: null };
+  const seen = birth.card ? seenCards.get(birth.card) : undefined;
+  const done = new Set(stable.done);
+  let active = useBirthStore.getState().queued?.pairingIndex ?? null;
+  if (seen && seen.pairingIndex !== null) {
+    // Cette naissance a déjà coché sa ligne : elle ne doit pas en cocher une autre.
+    done.delete(seen.pairingIndex);
+    active = seen.pairingIndex;
+  }
+  const result = readBirth(getMountFamily(family), birth, plan?.pairings, done, active);
+  const entry: LoggedBirth = { id: seen?.logId ?? nextId++, family, reading: null, error: null, copied: null };
 
   if ("error" in result) {
     entry.error = `Naissance vue, mais ${result.error}.`;
     toast.error(entry.error);
   } else {
     entry.reading = result;
-    if (result.pairingIndex !== null) markPairingDone(family, result.pairingIndex);
+    const index = result.pairingIndex;
+    if (seen?.ticked && seen.pairingIndex !== null && seen.pairingIndex !== index) togglePairingDone(family, seen.pairingIndex);
+    const ticked = index !== null && (seen?.pairingIndex === index ? seen.ticked : !stable.done.includes(index));
+    if (birth.card) seenCards.set(birth.card, { logId: entry.id, pairingIndex: index, ticked });
+    if (index !== null) markPairingDone(family, index);
     if (result.sex) {
       const name = result.names[result.sex];
       try {
@@ -130,7 +148,7 @@ async function handleBirth(birth: BirthEvent) {
       toast.warning(entry.error);
     }
   }
-  set((state) => ({ log: [entry, ...state.log].slice(0, LOG_SIZE) }));
+  set((state) => ({ log: [entry, ...state.log.filter((logged) => logged.id !== entry.id)].slice(0, LOG_SIZE) }));
 }
 
 const wait = (ms: number, signal: AbortSignal) =>

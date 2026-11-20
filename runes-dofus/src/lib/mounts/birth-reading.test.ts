@@ -27,11 +27,26 @@ describe("birth reading", () => {
     expect(readBirth(volkorne, { ...gameBirth, father: null })).toEqual(reading);
   });
 
+  const pairing = (pair: [string, string]): Pairing => ({ pair, potion: null, final: false, target: "roux" });
+  // Deux accouplements réciproques : mêmes couleurs, père et mère inversés.
+  const reciprocal = [pairing(["MEBPOEBEBPOPO", "FORPOORORPOPO"]), pairing(["MORPOORORPOPO", "FEBPOEBEBPOPO"])];
+
   it("takes the father and mother from the matching pairing, skipping done ones", () => {
-    const pairing = (pair: [string, string]): Pairing => ({ pair, potion: null, final: false, target: "roux" });
-    const pairings = [pairing(["MEBPOEBEBPOPO", "FORPOORORPOPO"]), pairing(["MORPOORORPOPO", "FEBPOEBEBPOPO"])];
-    const reading = readBirth(volkorne, birth, pairings, new Set([0]));
+    const reading = readBirth(volkorne, { ...birth, father: null }, reciprocal, new Set([0]));
     expect(reading).toMatchObject({ pairingIndex: 1, fatherId: "pourpre_orchidee", names: { F: "FROROORPOEBPO" } });
+  });
+
+  it("tells reciprocal pairings apart by the parent card marked ♂", () => {
+    expect(readBirth(volkorne, birth, reciprocal)).toMatchObject({ pairingIndex: 0, fatherId: "pourpre_ebene", names: { F: "FROROEBPOORPO" } });
+    expect(readBirth(volkorne, { ...birth, father: "left" }, reciprocal)).toMatchObject({ pairingIndex: 1, names: { F: "FROROORPOEBPO" } });
+    // Le ♂ lu prime sur une ligne déjà faite : c'est elle qu'on refait.
+    expect(readBirth(volkorne, birth, reciprocal, new Set([0]))).toMatchObject({ pairingIndex: 0 });
+  });
+
+  it("prefers the pairing in progress when several match", () => {
+    const twice = [reciprocal[0]!, reciprocal[0]!];
+    expect(readBirth(volkorne, birth, twice)).toMatchObject({ pairingIndex: 0 });
+    expect(readBirth(volkorne, birth, twice, new Set(), 1)).toMatchObject({ pairingIndex: 1 });
   });
 
   it("reports an unreadable colour instead of guessing", () => {

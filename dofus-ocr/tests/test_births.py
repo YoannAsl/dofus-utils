@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 import threading
 import unittest
 from http.server import ThreadingHTTPServer
@@ -110,6 +111,34 @@ class BirthWatcherTests(unittest.TestCase):
         self.assertEqual(latest, 2)
         self.assertEqual([birth.child for birth in births], ["Roux", "Roux"])
         self.assertEqual(births[0].sex, "F")
+
+    def test_a_late_sex_reading_keeps_the_card(self) -> None:
+        # The first frame misses the sex icon, the next one reads it: the same card, read twice.
+        unread = birth_payload()
+        screens = [unread, birth_payload()]
+        frames = iter(range(len(screens)))
+        capture = birth_capture()
+        sexes = iter([None, "F"])
+
+        def grab():
+            shade = next(frames) * 40
+            frame = capture.copy()
+            frame.paste((shade, shade, shade), (0, 0, 600, 600))
+            return frame
+
+        def ocr(frame):
+            return screens.pop(0), capture
+
+        watcher = BirthWatcher(grab=grab, ocr=ocr, watch_keys=False)
+        original_read = read_birth
+        with patch("dofus_ocr.births.read_birth", side_effect=lambda payload, image: replace(original_read(payload, image), sex=next(sexes))):
+            watcher.step()
+            watcher.step()
+
+        _, births, _ = watcher.wait(0, timeout=0)
+        self.assertEqual([birth.sex for birth in births], [None, "F"])
+        self.assertTrue(births[0].card)
+        self.assertEqual(births[0].card, births[1].card)
 
     def test_waits_for_the_dofus_window(self) -> None:
         watcher = BirthWatcher(grab=lambda: None, ocr=lambda frame: ({}, frame), watch_keys=False)

@@ -12,6 +12,8 @@ export interface BirthEvent {
   sex: Sex | null;
   /** La carte parent qui porte ♂ : le jeu met le père d'un côté ou de l'autre. */
   father?: "left" | "right" | null;
+  /** La carte vue : une image suivante qui lit enfin le sexe garde le même identifiant. */
+  card?: string;
 }
 
 export interface BirthReading {
@@ -79,8 +81,15 @@ export function matchColour(family: MountFamily, text: string, generation?: numb
  * Le nom du petit : sexe, couleur, puis les types du père et de la mère.
  * Avec un accouplement du plan pour ces parents, ses deux montures donnent l'ordre exact ;
  * sinon le père est la carte marquée ♂, ou celle de gauche si l'icône est illisible.
+ * `active` : l'accouplement en cours, choisi d'abord quand ses parents correspondent.
  */
-export function readBirth(family: MountFamily, birth: BirthEvent, pairings: Pairing[] = [], done: Set<number> = new Set()): BirthReading | { error: string } {
+export function readBirth(
+  family: MountFamily,
+  birth: BirthEvent,
+  pairings: Pairing[] = [],
+  done: Set<number> = new Set(),
+  active: number | null = null,
+): BirthReading | { error: string } {
   const childId = matchColour(family, birth.child, birth.generation);
   const leftId = matchColour(family, birth.left_parent);
   const rightId = matchColour(family, birth.right_parent);
@@ -92,7 +101,12 @@ export function readBirth(family: MountFamily, birth: BirthEvent, pairings: Pair
     return (colours[0] === leftId && colours[1] === rightId) || (colours[0] === rightId && colours[1] === leftId);
   };
   const candidates = pairings.map((pairing, index) => ({ pairing, index })).filter(({ pairing }) => sameParents(pairing));
-  const match = candidates.find(({ index }) => !done.has(index)) ?? candidates[0];
+  // A♂×B♀ et B♂×A♀ ont les mêmes couleurs : la carte ♂ dit lequel des deux vient de naître.
+  const observedFather = birth.father === "right" ? rightId : birth.father === "left" ? leftId : null;
+  const oriented = candidates.filter(({ pairing }) => parseMountName(pairing.pair[0], family)?.colourId === observedFather);
+  const pool = oriented.length ? oriented : candidates;
+  const open = pool.filter(({ index }) => !done.has(index));
+  const match = open.find(({ index }) => index === active) ?? open[0] ?? pool[0];
 
   const father = match ? parseMountName(match.pairing.pair[0], family) : null;
   const mother = match ? parseMountName(match.pairing.pair[1], family) : null;
