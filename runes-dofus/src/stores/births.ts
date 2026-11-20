@@ -87,10 +87,15 @@ async function handlePaste(text: string) {
 /**
  * Un nom copié à la main dans la page : les collages suivants reprennent à partir de lui.
  * Un parent du plan reprend son accouplement ; un autre nom compte comme celui d'un petit.
+ * `slot` : la ligne et le rôle cliqués, quand le même parent sert dans plusieurs accouplements.
  */
-export function followCopiedName(id: MountFamilyId, code: string) {
+export function followCopiedName(id: MountFamilyId, code: string, slot?: { pairingIndex: number; role: "male" | "female" }) {
   if (!useBirthStore.getState().watching || id !== family) return;
   const context = planContext();
+  if (slot && context && !context.done.has(slot.pairingIndex)) {
+    set({ queued: { ...slot, name: code } });
+    return;
+  }
   const index = context?.order.find((index) => !context.done.has(index) && context.pairings[index]!.pair.includes(code));
   if (index === undefined) set({ queued: { role: "baby", name: code, pairingIndex: null } });
   else set({ queued: { role: context!.pairings[index]!.pair[0] === code ? "male" : "female", name: code, pairingIndex: index } });

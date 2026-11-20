@@ -305,8 +305,8 @@ function BabyNames({ family, suffix, className, onCopy }: { family: MountFamily;
 /** `queued` : le parent de cette ligne qui est dans le presse-papiers. */
 function PairingRow({ family, row, done, queued }: { family: MountFamily; row: PlanRow; done: boolean; queued: "male" | "female" | null }) {
   const [open, setOpen] = useState(false);
-  const follow = (code: string) => followCopiedName(family.id, code);
   const { pairing, index } = row;
+  const follow = (role: "male" | "female") => (code: string) => followCopiedName(family.id, code, { pairingIndex: index, role });
   const targetId = pairing.target;
   const male = parseMountName(pairing.pair[0], family);
   const female = parseMountName(pairing.pair[1], family);
@@ -324,10 +324,10 @@ function PairingRow({ family, row, done, queued }: { family: MountFamily; row: P
           <Checkbox checked={done} onCheckedChange={() => togglePairingDone(family.id, index)} aria-label={`Accouplement ${index + 1} fait`} />
         </TableCell>
         <TableCell>
-          <MountCell family={family} code={pairing.pair[0]} onCopy={follow} active={queued === "male"} />
+          <MountCell family={family} code={pairing.pair[0]} onCopy={follow("male")} active={queued === "male"} />
         </TableCell>
         <TableCell>
-          <MountCell family={family} code={pairing.pair[1]} onCopy={follow} active={queued === "female"} />
+          <MountCell family={family} code={pairing.pair[1]} onCopy={follow("female")} active={queued === "female"} />
         </TableCell>
         <TableCell className="whitespace-normal font-medium">
           <span className="flex flex-wrap items-center gap-1.5">
