@@ -40,6 +40,13 @@ def key_action(vk: int, ctrl: bool, shift: bool, alt: bool) -> str | None:
     return None
 
 
+def clipboard_sequence() -> int:
+    """Changes each time the clipboard does; reading it does not open the clipboard Dofus is pasting from."""
+    if sys.platform != "win32":
+        return 0
+    return ctypes.windll.user32.GetClipboardSequenceNumber()
+
+
 def get_clipboard() -> str | None:
     if sys.platform != "win32":
         return None
@@ -100,8 +107,14 @@ class KeyHook:
             self._on_action(action, None)
             return
 
+        # What the clipboard holds now is what Dofus pastes. If it changes before the read below,
+        # a birth replaced it: the pasted name is lost, so no paste is reported.
+        sequence = clipboard_sequence()
+
         def report_paste() -> None:
             text = (get_clipboard() or "").strip()
+            if clipboard_sequence() != sequence:
+                return
             if MOUNT_NAME.match(text):
                 self._on_action("paste", text)
 

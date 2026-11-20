@@ -103,13 +103,15 @@ class RunesOcrHandler(SimpleHTTPRequestHandler):
         except Exception as exc:
             self._send_json({"error": str(exc), "server": build_health_payload()}, status=500)
 
-    def _allow_capture_request(self) -> bool:
+    def _local_hosts(self) -> tuple[str, ...]:
         port = self.server.server_port
         local_hosts = ("127.0.0.1", "localhost")
-        hosts = local_hosts if port == 80 else tuple(f"{host}:{port}" for host in local_hosts)
+        return local_hosts if port == 80 else tuple(f"{host}:{port}" for host in local_hosts)
+
+    def _allow_capture_request(self) -> bool:
         if (
             self.client_address[0] == "127.0.0.1"
-            and self.headers.get("Host") in hosts
+            and self.headers.get("Host") in self._local_hosts()
             and self.headers.get("Origin") is None
             and self.headers.get("Sec-Fetch-Site") in (None, "same-origin")
         ):
@@ -118,9 +120,11 @@ class RunesOcrHandler(SimpleHTTPRequestHandler):
         return False
 
     def _allow_app_request(self) -> bool:
-        """A request from the app's own page: browsers set Sec-Fetch-Site, other sites get cross-site."""
+        """A request from the app's own page: browsers set Sec-Fetch-Site, other sites get cross-site.
+        The Host check stops a page on another name that resolves to this machine."""
         if (
             self.client_address[0] == "127.0.0.1"
+            and self.headers.get("Host") in self._local_hosts()
             and self.headers.get("Sec-Fetch-Site") in (None, "same-origin")
             and self.headers.get("Content-Type", "").split(";", 1)[0].strip() == "application/json"
         ):
