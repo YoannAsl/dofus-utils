@@ -58,7 +58,6 @@ function MarketPage() {
   const [searchText, setSearchText] = useState(q);
   const [selected, setSelected] = useState<DofusItem | null>(null);
 
-  // The URL follows the search box after a short pause, so typing does not spam DofusDB.
   useEffect(() => {
     const trimmed = searchText.trim();
     if (trimmed === q) return;

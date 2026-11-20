@@ -46,7 +46,6 @@ async function importPrices(file: File) {
   }
 }
 
-/** Backup, restore and reset of everything saved in this browser. */
 export function PriceTools() {
   const fileInput = useRef<HTMLInputElement>(null);
   const [confirmReset, setConfirmReset] = useState(false);

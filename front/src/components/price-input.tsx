@@ -4,10 +4,6 @@ import { parsePrice } from "@/lib/prices";
 import { cn } from "@/lib/utils";
 import { setPrice, usePrice } from "@/stores/prices";
 
-/**
- * Edits the saved HDV price of an item. The price is saved when the field is left or on Enter,
- * not on every keystroke, so a half-typed value is never stored or wiped.
- */
 export function PriceInput({
   itemId,
   className,

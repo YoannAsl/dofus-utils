@@ -1,7 +1,3 @@
-/**
- * Flot de coût minimal par plus courts chemins successifs (Bellman-Ford en file), sur un graphe
- * stocké en listes chaînées : chaque arc `e` a son arc retour en `e ^ 1`.
- */
 export class FlowGraph {
   readonly to: number[] = [];
   readonly capacity: number[] = [];
@@ -13,7 +9,6 @@ export class FlowGraph {
     this.head = new Int32Array(nodeCount).fill(-1);
   }
 
-  /** Ajoute un arc et renvoie son indice. */
   addEdge(from: number, to: number, capacity: number, cost: number) {
     this.to.push(to, from);
     this.capacity.push(capacity, 0);
@@ -24,19 +19,15 @@ export class FlowGraph {
     return this.to.length - 2;
   }
 
-  /** Flot passé sur l'arc `edge`. */
   flowOn(edge: number) {
     return this.capacity[edge + 1]!;
   }
 }
 
 interface AugmentOptions {
-  /** Augmente tant que le plus court chemin a un coût accepté. */
   acceptPath: (cost: number) => boolean;
   maxRounds: number;
-  /** Écart minimal pour améliorer une distance. */
   relaxTolerance: number;
-  /** Cycle de coût négatif : lever une erreur plutôt que s'arrêter. */
   throwOnNegativeCycle: boolean;
 }
 

@@ -5,7 +5,6 @@ export interface BreakEntryRune {
   quantity: number;
 }
 
-// Rune value uses current HDV prices; runes without a price count as missing, not as zero kamas.
 export function calculateBreakResult(
   entry: { unitCost: number; quantity: number; runes: BreakEntryRune[] },
   readRunePrice: (id: string) => number | null,
@@ -22,12 +21,6 @@ export function calculateBreakResult(
   return { cost, value, missing, profit, roi: cost ? profit / cost : null };
 }
 
-// Every positive line turns into rune weight: (3 × jet × characteristic weight × level) / 200 + 1.
-// That weight × coefficient becomes runes of the line, each worth characteristic weight × rune value.
-// A focus keeps the focused line's weight and adds half the weight of every other positive line,
-// all paid out in the focused rune. Maluses give nothing. Exotic lines add weight but cannot be focused.
-// DoFocus divides each line by its own rune value before pooling, which inflates the focus
-// on runes worth more than one point (Vi ×5, Ini ×10, Pod ×10).
 export function shatterLineWeight(jet: number, weight: number, level: number) {
   return (3 * jet * weight * level) / 200 + 1;
 }
@@ -48,7 +41,6 @@ export interface ShatterRow {
   kamasWithFocus: number | null;
 }
 
-/** A ranked outcome: `index` is the focused line, or null for no focus. */
 export interface ShatterOption {
   index: number | null;
   value: number;
@@ -95,7 +87,6 @@ export function calculateShatter({ level, coefficient, lines }: { level: number;
   return { rows, missing, totalWithoutFocus, options, best: options[0] ?? null };
 }
 
-// Coefficient at which the best result exactly pays back the item cost, assuming runes scale linearly with it.
 export function calculateBreakEvenCoefficient(cost: number, coefficient: number, bestValue: number) {
   return cost > 0 && coefficient > 0 && bestValue > 0 ? Math.round((cost * coefficient) / bestValue) : null;
 }

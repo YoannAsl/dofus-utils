@@ -12,7 +12,6 @@ describe("stable OCR", () => {
   });
 
   it("repairs common misreads against the name grammar", () => {
-    // Lu par Windows OCR sur une capture agrandie : le U de TU est devenu « I-J ».
     expect(repairMountName("FTI-JIVTUTUIVIV", volkorne)?.code).toBe("FTUIVTUTUIVIV");
     expect(repairMountName("MP0ORP0P0OR0R", volkorne)?.code).toBe("MPOORPOPOOROR");
     expect(repairMountName("FlNlNSAUVSAUV", volkorne)?.code).toBe("FININSAUVSAUV");
@@ -22,7 +21,6 @@ describe("stable OCR", () => {
   it("gives up rather than guess between two different mounts", () => {
     expect(repairMountName("FXXXXXXXXXXXX", volkorne)).toBeNull();
     expect(repairMountName("MPOOR", volkorne)).toBeNull();
-    // Une lettre perdue : « …OROR » ou « …POOR », une seule correction chacun.
     expect(repairMountName("MPOORPOPOOOR", volkorne)).toBeNull();
   });
 
@@ -37,12 +35,10 @@ describe("stable OCR", () => {
   });
 
   it("joins a name cut into several words", () => {
-    // Lu par Windows OCR sur une capture agrandie.
     expect(readStableCapture([line("MPOIN PO POI NIN", 20), line("GEN. 2", 20)], volkorne).names).toEqual(["MPOINPOPOININ"]);
   });
 
   it("flags a row whose name was not read", () => {
-    // Windows OCR n'a lu que la fin du nom, « POPO », à côté de la génération.
     const reading = readStableCapture([line("FAMINININAMAM", 20), line("GEN. 4", 20), line("POPO", 50), line("GEN. 2", 50), line("1", 70)], volkorne);
     expect(reading.names).toEqual(["FAMINININAMAM"]);
     expect(reading.unreadable).toEqual(["POPO"]);

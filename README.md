@@ -12,3 +12,5 @@ Tools for Dofus: market prices and crafting costs, shattering, and breeding (Él
 ```
 
 It rebuilds `front/dist` when the front sources changed, then starts the server on `http://127.0.0.1:8765/`. Extra arguments go to the server, for example `.\start.ps1 --port 9000`.
+
+Design decisions are recorded in [`docs/adr/`](docs/adr). Code comments are banned; `node scripts/comments.mjs check` enforces it.

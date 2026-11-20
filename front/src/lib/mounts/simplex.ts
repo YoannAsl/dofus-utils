@@ -1,9 +1,3 @@
-/**
- * Simplexe primal à variables bornées, sur tableau dense, pour maximiser c·x sous A·x = b, 0 ≤ x ≤ u.
- * La base de départ doit être faite de colonnes unitaires (des écarts) et rendre b ≥ 0 réalisable.
- * Choix de la colonne entrante : devex ; repli sur la règle de Bland après 50 pivots dégénérés.
- */
-
 export interface LpColumn {
   rows: number[];
   values: number[];
@@ -14,7 +8,6 @@ export interface LpProblem {
   columns: LpColumn[];
   rhs: Float64Array;
   cost: Float64Array;
-  /** Colonne de base de chaque ligne au départ. */
   initialBasis: Int32Array;
   upper?: Float64Array | null;
 }
@@ -24,13 +17,10 @@ export type LpStatus = "optimal" | "unbounded" | "iterations";
 interface SimplexState {
   rowCount: number;
   colCount: number;
-  /** Tableau courant, ligne par ligne : B⁻¹·A. */
   tableau: Float64Array;
   upper: Float64Array;
-  /** Valeur des variables de base. */
   beta: Float64Array;
   basis: Int32Array;
-  /** Ligne d'une variable de base, -1 hors base. */
   basisRow: Int32Array;
   atUpper: Uint8Array;
   reducedCost: Float64Array;
@@ -54,7 +44,6 @@ export interface LpCertificate {
 export interface LpResult {
   status: LpStatus;
   x: Float64Array;
-  /** Valeur duale de chaque ligne. */
   duals: Float64Array;
   reducedCost: Float64Array;
   objective: number;
@@ -70,7 +59,6 @@ const BLAND_AFTER_DEGENERATE = 50;
 
 interface SolveOptions {
   maxIterations?: number;
-  /** Petite perturbation du second membre, qui évite les cycles sur les sommets dégénérés. */
   perturbation?: number;
   certify?: boolean;
 }
@@ -120,7 +108,6 @@ export function solveLp(problem: LpProblem, { maxIterations = 1e5, perturbation 
   return finish(state, iterate(state, maxIterations), certify);
 }
 
-/** Ajoute des colonnes à un problème déjà résolu et repart de sa base optimale. */
 export function extendLp(
   solved: SimplexState,
   extra: (LpColumn & { cost: number; upper?: number })[],
@@ -130,7 +117,6 @@ export function extendLp(
   const n = n0 + extra.length;
   const tableau = new Float64Array(m * n);
   for (let r = 0; r < m; r += 1) tableau.set(solved.tableau.subarray(r * n0, (r + 1) * n0), r * n);
-  // Les colonnes de la base de départ portent B⁻¹ : B⁻¹·a donne la nouvelle colonne du tableau.
   extra.forEach((column, k) => {
     const j = n0 + k;
     for (let r = 0; r < m; r += 1) {
@@ -222,7 +208,6 @@ function iterate(state: SimplexState, maxIterations: number): LpStatus {
     if (!entering) return "optimal";
     const { column: g, direction } = entering;
 
-    // Test du ratio, 1er passage (Harris) : le pas maximal avec une tolérance.
     let touched = 0;
     let relaxedStep = upper[g]!;
     for (let r = 0; r < m; r += 1) {
@@ -244,7 +229,6 @@ function iterate(state: SimplexState, maxIterations: number): LpStatus {
       }
     }
 
-    // 2e passage : parmi les lignes qui tiennent dans ce pas, le plus grand pivot.
     let leavingRow = -1;
     let stepLength = upper[g]!;
     let largestPivot = 0;
@@ -274,7 +258,6 @@ function iterate(state: SimplexState, maxIterations: number): LpStatus {
     for (let k = 0; k < touched; k += 1) beta[touchedRows[k]!]! -= stepLength * direction * touchedValues[k]!;
 
     if (leavingRow < 0) {
-      // La variable entrante passe d'une borne à l'autre sans changer de base.
       atUpper[g] = direction > 0 ? 1 : 0;
       state.flips += 1;
       degenerate = 0;
@@ -331,7 +314,6 @@ function iterate(state: SimplexState, maxIterations: number): LpStatus {
   }
 }
 
-/** Relit x sans la perturbation, les valeurs duales et, sur demande, un certificat d'optimalité. */
 function finish(state: SimplexState, status: LpStatus, certify: boolean): LpResult {
   const { rowCount: m, colCount: n, tableau, upper, basis, basisRow, atUpper, reducedCost, columns, rhs, cost, initialBasis } = state;
   const x = new Float64Array(n);

@@ -3,16 +3,13 @@ import { parseMountName } from "@/lib/mounts/names";
 import type { Pairing } from "@/lib/mounts/planner";
 import type { Sex } from "@/lib/mounts/types";
 
-/** Ce que le serveur OCR lit sur la carte « Vous avez obtenu » de la fenêtre Accouplement. */
 export interface BirthEvent {
   child: string;
   generation: number | null;
   left_parent: string;
   right_parent: string;
   sex: Sex | null;
-  /** La carte parent qui porte ♂ : le jeu met le père d'un côté ou de l'autre. */
   father?: "left" | "right" | null;
-  /** La carte vue : une image suivante qui lit enfin le sexe garde le même identifiant. */
   card?: string;
 }
 
@@ -21,13 +18,10 @@ export interface BirthReading {
   sex: Sex | null;
   fatherId: string;
   motherId: string;
-  /** Les deux noms possibles, mâle puis femelle. */
   names: { M: string; F: string };
-  /** L'accouplement du plan qui correspond à ces parents, s'il y en a un. */
   pairingIndex: number | null;
 }
 
-/** Lettres seules, sans accents ni petits mots : « Pourpre ct Ébène » devient « pourpreebene ». */
 function letters(text: string) {
   return text
     .normalize("NFD")
@@ -51,7 +45,6 @@ function editDistance(a: string, b: string) {
 
 const MIN_SIMILARITY = 0.75;
 
-/** Le jeu écrit « Pourpre et Orchidée » ; le nom se compare dans les deux ordres. */
 function colourKeys(family: MountFamily, colourId: string) {
   const colour = family.byId.get(colourId)!;
   const recipe = colour.generation % 2 === 0 ? colour.recipes[0] : undefined;
@@ -60,7 +53,6 @@ function colourKeys(family: MountFamily, colourId: string) {
   return [a + b, b + a];
 }
 
-/** La couleur dont le nom ressemble le plus au texte lu, ou null si aucune n'est assez proche. */
 export function matchColour(family: MountFamily, text: string, generation?: number | null): string | null {
   const read = letters(text);
   if (!read) return null;
@@ -73,16 +65,9 @@ export function matchColour(family: MountFamily, text: string, generation?: numb
     }
   }
   if (best && best.score >= MIN_SIMILARITY) return best.id;
-  // Le numéro de génération peut être mal lu : on retente sur toutes les couleurs.
   return generation ? matchColour(family, text) : null;
 }
 
-/**
- * Le nom du petit : sexe, couleur, puis les types du père et de la mère.
- * Avec un accouplement du plan pour ces parents, ses deux montures donnent l'ordre exact ;
- * sinon le père est la carte marquée ♂, ou celle de gauche si l'icône est illisible.
- * `active` : l'accouplement en cours, choisi d'abord quand ses parents correspondent.
- */
 export function readBirth(
   family: MountFamily,
   birth: BirthEvent,
@@ -101,7 +86,6 @@ export function readBirth(
     return (colours[0] === leftId && colours[1] === rightId) || (colours[0] === rightId && colours[1] === leftId);
   };
   const candidates = pairings.map((pairing, index) => ({ pairing, index })).filter(({ pairing }) => sameParents(pairing));
-  // A♂×B♀ et B♂×A♀ ont les mêmes couleurs : la carte ♂ dit lequel des deux vient de naître.
   const observedFather = birth.father === "right" ? rightId : birth.father === "left" ? leftId : null;
   const oriented = candidates.filter(({ pairing }) => parseMountName(pairing.pair[0], family)?.colourId === observedFather);
   const pool = oriented.length ? oriented : candidates;

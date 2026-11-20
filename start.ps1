@@ -27,7 +27,6 @@ if (Test-Path $bundledPython) {
     throw "Python 3 was not found. Install Python 3.10+ or run from Codex where the bundled runtime is available."
 }
 
-# The server serves the built app: rebuild it when the sources changed since the last build.
 $distIndex = Join-Path $frontRoot "dist\index.html"
 $sources = @(Get-ChildItem -Path (Join-Path $frontRoot "src") -Recurse -File) + @(Get-Item (Join-Path $frontRoot "index.html"), (Join-Path $frontRoot "package.json"))
 $lastSourceChange = ($sources | Measure-Object -Property LastWriteTime -Maximum).Maximum

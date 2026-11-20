@@ -11,15 +11,12 @@ export interface OcrLine {
   words: OcrWord[];
 }
 
-/** Lettres que l'OCR confond entre elles : les substituer coûte moitié moins. */
 const CONFUSABLE = ["ODQ", "ILJT", "UV", "EF", "MN", "BE", "SZ", "CG", "AR"];
 const confusable = new Set(CONFUSABLE.flatMap((group) => [...group].flatMap((a) => [...group].map((b) => a + b))));
 const DIGIT_LOOKALIKES: Record<string, string> = { "0": "O", "1": "I", "|": "I", "!": "I", "5": "S", "8": "B", "2": "Z", "6": "G" };
-/** Une lettre que l'OCR lit en deux morceaux : U lu « IJ », M lu « RN »… */
 const SPLIT_GLYPHS: Record<string, string> = { IJ: "U", LJ: "U", II: "U", LI: "U", RN: "M", CL: "D" };
 const MAX_REPAIR_COST = 2;
 
-/** Majuscules sans accents ; les chiffres pris pour des lettres sont remplacés, le reste est retiré. */
 function normalizeToken(raw: string) {
   const truncated = /(…|\.{2,})\s*$/u.test(raw);
   const letters = raw
@@ -36,7 +33,6 @@ function substitutionCost(a: string, b: string) {
   return confusable.has(a + b) ? 0.5 : 1;
 }
 
-/** Distance d'édition pondérée entre un morceau lu et un code attendu. */
 function editDistance(read: string, expected: string) {
   const beforePrevious = new Float64Array(expected.length + 1);
   const previous = new Float64Array(expected.length + 1);
@@ -60,17 +56,11 @@ interface Parse {
   name: string;
 }
 
-/**
- * Réaligne un nom mal lu sur la forme attendue — sexe, couleur, 1er et 2e parent (ou SAUVSAUV) —
- * par programmation dynamique sur les codes de la famille. Ne garde la réparation que si elle est
- * proche et sans ambiguïté.
- */
 function alignToGrammar(letters: string, family: MountFamily, truncated: boolean): string | null {
   const types = [...family.idByType.keys()];
   const sexes = ["M", "F"];
   const segments: string[][] = [sexes, types, [...types, WILD + WILD, WILD], types];
   const length = letters.length;
-  // best[s][i] : les meilleures lectures des s premiers segments qui consomment i lettres.
   const best: Parse[][][] = segments.map(() => []);
   best.push([]);
   best[0]![0] = [{ cost: 0, name: "" }];
@@ -93,14 +83,12 @@ function alignToGrammar(letters: string, family: MountFamily, truncated: boolean
             const total = start.cost + cost;
             if (total > MAX_REPAIR_COST) continue;
             const name = start.name + code;
-            // Une capture n'a pas de 2e parent : SAUVSAUV termine le nom.
             if (s === 2 && code.startsWith(WILD)) keep(best[4]!, i + span, { cost: total, name });
             else keep(best[s + 1]!, i + span, { cost: total, name });
           }
         }
     }
   const finished: Parse[] = [...(best[4]![length] ?? [])];
-  // Nom coupé : le 2e parent est la couleur de la monture elle-même.
   if (truncated) for (const parse of best[3]![length] ?? []) finished.push({ cost: parse.cost, name: parse.name + parse.name.slice(1, 5) });
   const valid = finished
     .map((parse) => ({ ...parse, mount: parseMountName(parse.name, family) }))
@@ -108,7 +96,6 @@ function alignToGrammar(letters: string, family: MountFamily, truncated: boolean
     .sort((a, b) => a.cost - b.cost);
   const first = valid[0];
   if (!first) return null;
-  // Deux lectures presque aussi plausibles qui désignent deux montures différentes : on ne choisit pas.
   const identity = (mount: NonNullable<(typeof first)["mount"]>) => `${mount.sex}|${mount.colourId}|${[...mount.parentIds].sort().join(",")}`;
   const rivals = new Set(valid.filter((parse) => parse.cost - first.cost < 0.5).map((parse) => identity(parse.mount!)));
   return rivals.size === 1 ? first.name : null;
@@ -116,17 +103,14 @@ function alignToGrammar(letters: string, family: MountFamily, truncated: boolean
 
 export interface RepairedName {
   code: string;
-  /** Lecture brute, quand elle a été corrigée. */
   from?: string;
 }
 
-/** Nom de monture lu par OCR : tel quel, complété s'il est coupé, ou réparé. */
 export function repairMountName(raw: string, family: MountFamily): RepairedName | null {
   const direct = parseMountName(raw, family);
   if (direct) return { code: direct.code };
   const { letters, truncated } = normalizeToken(raw);
   if (letters.length < 7 || letters.length > 17) return null;
-  // L'OCR lit bien les « … » : sans eux, un nom trop court a perdu une lettre, il n'a pas été coupé.
   const clean = truncated ? completeMountName(letters + "…", family)?.code : parseMountName(letters, family)?.code;
   if (clean) return { code: clean, from: raw };
   const aligned = alignToGrammar(letters, family, truncated);
@@ -136,7 +120,6 @@ export function repairMountName(raw: string, family: MountFamily): RepairedName 
 export interface StableCaptureReading {
   names: string[];
   corrected: { from: string; to: string }[];
-  /** Lignes qui ressemblent à un nom de monture mais n'ont pas pu être lues. */
   unreadable: string[];
 }
 
@@ -144,11 +127,6 @@ const isGeneration = (word: string) => /^GEN\b/i.test(word.trim());
 const isNamePiece = (word: string) => /^[A-Z0-9|.…-]+$/i.test(word.trim());
 const middle = (word: OcrWord) => (word.box ? word.box.y + word.box.height / 2 : null);
 
-/**
- * Le nom écrit au début d'une ligne, recollé quand l'OCR l'a coupé en plusieurs mots
- * (« MPOIN PO POI NIN »). Du plus long au plus court : un morceau seul se « répare » parfois
- * en un autre nom.
- */
 function nameCandidates(words: string[]) {
   const start = words.findIndex((word) => /^[MF]/i.test(word.trim()));
   if (start < 0) return [];
@@ -161,7 +139,6 @@ function nameCandidates(words: string[]) {
   return normalizeToken(candidates[0]!).letters.length >= 7 ? candidates : [];
 }
 
-/** Noms de montures d'une capture de l'étable, de haut en bas. */
 export function readStableCapture(lines: OcrLine[], family: MountFamily): StableCaptureReading {
   const top = (line: OcrLine) => line.words[0]?.box?.y ?? 0;
   const left = (line: OcrLine) => line.words[0]?.box?.x ?? 0;
@@ -169,7 +146,6 @@ export function readStableCapture(lines: OcrLine[], family: MountFamily): Stable
     .map((line, index) => ({ line, index }))
     .sort((a, b) => top(a.line) - top(b.line) || left(a.line) - left(b.line) || a.index - b.index);
   const reading: StableCaptureReading = { names: [], corrected: [], unreadable: [] };
-  // Chaque ligne de l'étable a une génération : celles dont aucun nom n'a été lu sont signalées.
   const generations: OcrWord[] = [];
   const rowsWithName: number[] = [];
   const otherText: OcrWord[] = [];

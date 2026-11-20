@@ -1,7 +1,6 @@
 import { accentColourName } from "@/lib/mounts/family";
 import type { MountColour } from "@/lib/mounts/types";
 
-/** Génération à partir de laquelle une naissance sort du plan (G10 : fin de lignée). */
 export const EXIT_GENERATION = 10;
 
 export interface Recipe {
@@ -10,7 +9,6 @@ export interface Recipe {
   child: number;
 }
 
-/** Accouplement orienté : femelle de couleur `f`, mâle de couleur `m`. */
 export interface Operation {
   f: number;
   m: number;
@@ -18,19 +16,14 @@ export interface Operation {
   recipe: number;
 }
 
-/** Couleurs numérotées dans l'ordre de l'arbre, pour les calculs. */
 export interface BreedingGraph {
   ids: string[];
   pos: Map<string, number>;
   gen: number[];
-  /** Noms affichables, avec accents. */
   name: string[];
   recipes: Recipe[];
-  /** Les deux orientations de chaque recette bicolore. */
   ops: Operation[];
-  /** Recettes où chaque couleur sert de parent. */
   usesOf: number[][];
-  /** Couleurs G1. */
   bases: number[];
   exits: Uint8Array;
   n: number;
@@ -87,7 +80,6 @@ export function breedingGraph(colours: MountColour[]): BreedingGraph {
   return graph;
 }
 
-/** Couleurs à obtenir et tous leurs ancêtres. */
 export function ancestorsOf(graph: BreedingGraph, wanted: ArrayLike<number>) {
   const marked = new Uint8Array(graph.n);
   const parents = graph.ids.map((): number[] => []);
@@ -109,5 +101,4 @@ export function ancestorsOf(graph: BreedingGraph, wanted: ArrayLike<number>) {
   return marked;
 }
 
-/** Valeur en génétons d'une monture de cette génération. */
 export const genetonValue = (graph: BreedingGraph, node: number) => 2 ** (graph.gen[node]! - 1);

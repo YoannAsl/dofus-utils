@@ -45,7 +45,6 @@ describe("shatter", () => {
 
   it("turns each line into runes and adds half the other lines to a focus", () => {
     const result = calculateShatter({ level: 200, coefficient: 100, lines: [force, vitality] });
-    // Force weighs 3 × 50 × 1 × 200 / 200 + 1 = 151, Vitalité 3 × 300 × 0.2 × 200 / 200 + 1 = 181.
     expect(result.rows).toEqual([
       { runesWithoutFocus: 151, kamasWithoutFocus: 1510, runesWithFocus: 241.5, kamasWithFocus: 2415 },
       { runesWithoutFocus: 181, kamasWithoutFocus: 362, runesWithFocus: 256.5, kamasWithFocus: 513 },
@@ -68,7 +67,6 @@ describe("shatter", () => {
     });
     expect(result.rows[1]).toEqual({ runesWithoutFocus: null, kamasWithoutFocus: null, runesWithFocus: null, kamasWithFocus: null });
     expect(result.rows[2]?.runesWithFocus).toBeNull();
-    // The malus adds no weight; the exo adds its full weight to the Force focus.
     expect(result.rows[0]?.runesWithFocus).toBe(241.5);
   });
 
@@ -109,7 +107,6 @@ describe("market and fuel costs", () => {
     expect(rows.map((row) => row.costs)).toEqual([
       { cost: 500, fillCost: 4000 },
       { cost: 600, fillCost: 4800 },
-      // 120 000 points from 80 000 to the 200 000 maximum need 20 units.
       { cost: 500, fillCost: 6000 },
     ]);
     expect(rows.map((row) => row.isBestOfTier)).toEqual([true, false, true]);

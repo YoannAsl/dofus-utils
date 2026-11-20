@@ -12,7 +12,6 @@ const CLIPBOARD_PATH = "/api/clipboard";
 const RETRY_MS = 3000;
 const LOG_SIZE = 8;
 
-/** Ce que fait le serveur OCR pendant qu'on écoute : il regarde Dofus, ou attend qu'il passe devant. */
 export type WatchStatus = "connecting" | "watching" | "no-window" | "offline" | "outdated" | "error";
 
 export interface LoggedBirth {
@@ -20,7 +19,6 @@ export interface LoggedBirth {
   family: MountFamilyId;
   reading: BirthReading | null;
   error: string | null;
-  /** Le nom copié, quand le sexe était lisible et la copie a marché. */
   copied: string | null;
 }
 
@@ -29,11 +27,9 @@ interface BirthState {
   status: WatchStatus;
   detail: string;
   log: LoggedBirth[];
-  /** Le nom que l'app a mis dans le presse-papiers, et qu'un collage dans Dofus fera passer au suivant. */
   queued: QueuedName | null;
 }
 
-/** Ce que le serveur OCR voit dans Dofus : une naissance, un nom collé, ou F8 / Maj+F8. */
 type WatchEvent = ({ type: "birth" } & BirthEvent) | { type: "paste"; text: string } | { type: "next" | "previous" };
 
 export const useBirthStore = create<BirthState>(() => ({ watching: false, status: "connecting", detail: "", log: [], queued: null }));
@@ -43,7 +39,6 @@ let family: MountFamilyId = "dragodinde";
 let controller: AbortController | null = null;
 let nextId = 1;
 
-/** Le serveur écrit le presse-papiers : un onglet en arrière-plan n'en a pas le droit. */
 export async function copyToClipboard(name: string) {
   const response = await fetch(CLIPBOARD_PATH, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: name }) });
   if (!response.ok) {
@@ -68,7 +63,6 @@ async function queueName(next: QueuedName, quiet = false) {
   }
 }
 
-/** F8 et Maj+F8 : le nom de parent suivant ou précédent. */
 async function stepQueue(direction: 1 | -1, quiet = false) {
   const context = planContext();
   if (!context) return;
@@ -84,11 +78,6 @@ async function handlePaste(text: string) {
   if (next) await queueName(next);
 }
 
-/**
- * Un nom copié à la main dans la page : les collages suivants reprennent à partir de lui.
- * Un parent du plan reprend son accouplement ; un autre nom compte comme celui d'un petit.
- * `slot` : la ligne et le rôle cliqués, quand le même parent sert dans plusieurs accouplements.
- */
 export function followCopiedName(id: MountFamilyId, code: string, slot?: { pairingIndex: number; role: "male" | "female" }) {
   if (!useBirthStore.getState().watching || id !== family) return;
   const context = planContext();
@@ -107,10 +96,6 @@ async function handleEvent(event: WatchEvent) {
   else await stepQueue(event.type === "next" ? 1 : -1);
 }
 
-/**
- * Les cartes déjà lues : une 2e lecture de la même carte (le sexe enfin lisible) reprend la 1re.
- * `ticked` : la ligne que cette naissance a cochée elle-même, à décocher si la 2e lecture en choisit une autre.
- */
 const seenCards = new Map<string, { logId: number; pairingIndex: number | null; ticked: boolean }>();
 
 async function handleBirth(birth: BirthEvent) {
@@ -120,7 +105,6 @@ async function handleBirth(birth: BirthEvent) {
   const done = new Set(stable.done);
   let active = useBirthStore.getState().queued?.pairingIndex ?? null;
   if (seen && seen.pairingIndex !== null) {
-    // Cette naissance a déjà coché sa ligne : elle ne doit pas en cocher une autre.
     done.delete(seen.pairingIndex);
     active = seen.pairingIndex;
   }
@@ -162,10 +146,6 @@ const wait = (ms: number, signal: AbortSignal) =>
     signal.addEventListener("abort", () => (clearTimeout(timer), resolve()), { once: true });
   });
 
-/**
- * Chaque requête attend la prochaine naissance (jusqu'à 20 s) et garde le serveur en éveil.
- * Une requête réseau qui revient n'est pas ralentie dans un onglet en arrière-plan, au contraire des minuteurs.
- */
 async function listen(signal: AbortSignal) {
   let cursor = "";
   while (!signal.aborted) {
@@ -177,7 +157,6 @@ async function listen(signal: AbortSignal) {
       }
       if (!response.ok) throw new Error(`erreur HTTP ${response.status}`);
       const payload = (await response.json()) as { cursor: string; events?: WatchEvent[]; status: string };
-      // Un serveur d'avant les touches de Dofus renvoie « births » sans « events ».
       if (!Array.isArray(payload.events)) {
         set({ status: "outdated", detail: "" });
         return;
@@ -210,7 +189,6 @@ export function setBirthWatch(on: boolean, id: MountFamilyId) {
     controller = new AbortController();
     set({ watching: true, status: "connecting", detail: "", queued: null });
     listen(controller.signal);
-    // Le premier mâle à chercher est prêt avant même d'aller dans Dofus.
     void stepQueue(1, true);
   } else {
     set({ watching: false, queued: null });

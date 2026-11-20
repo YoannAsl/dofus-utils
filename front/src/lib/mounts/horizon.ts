@@ -1,35 +1,20 @@
-/**
- * Choix des reproductions d'une étape par programmation linéaire sur un horizon de quelques étapes.
- *
- * Le stock est compté par couleur et par sexe. Une tentative (femelle `f` × mâle `m`) donne en
- * moyenne `p` petit de la couleur visée et rend `1 − p/2` monture de chaque couleur parente, la moitié
- * de chaque sexe. Elle rapporte `p · (2^(gen f − 1) + 2^(gen m − 1))` génétons. Les G1 se capturent,
- * dans la limite d'un budget par étape ; une naissance de G10 sort du plan et libère une capture.
- * Sur les premières étapes les sexes sont suivis, ensuite le stock est fusionné. Le stock qui reste
- * en fin d'horizon vaut une valeur terminale, calculée par un PL approché (ALP) ou une itération de valeur.
- * La solution de la 1re étape est ensuite arrondie en tentatives entières par un flot de coût minimal.
- */
 import { ancestorsOf, type BreedingGraph, type Operation, type Recipe, genetonValue } from "@/lib/mounts/breeding-graph";
 import { augmentFlow, FlowGraph } from "@/lib/mounts/min-cost-flow";
 import { extendLp, type LpColumn, type LpResult, solveLp } from "@/lib/mounts/simplex";
 
 const FEMALE = 0;
 const MALE = 1;
-/** Stock fusionné, quand les sexes ne sont plus suivis. */
 const ANY = 2;
 type TrackedSex = typeof FEMALE | typeof MALE;
 
 export interface HorizonConfig {
-  /** Étapes où les sexes sont suivis. */
   sexedSteps: number;
-  /** Étapes ajoutées ensuite, sexes fusionnés. */
   mergedSteps: number;
   delta: number;
   deltaTerm: number;
   termScale: number;
   rebalanceMargin: number;
   rebalance: boolean;
-  /** Petit bonus des tentatives fractionnaires, qui départage l'arrondi. */
   fracBonus: number;
   sexTol: number;
   maxCells: number;
@@ -71,19 +56,14 @@ export type ObjectiveMode = "genetons" | "success";
 export interface StepInput {
   graph: BreedingGraph;
   mode: ObjectiveMode;
-  /** Part des naissances qui visent la couleur la plus haute. */
   chance: number;
   captureBudget: number;
   counts: Record<string, number>;
   females: Record<string, number>;
-  /** Mode succès : nombre de naissances voulues par couleur. */
   missing: Record<string, number>;
   avoidObtained: boolean;
 }
 
-// ——— Valeurs terminales ———
-
-/** Valeur d'une monture de chaque couleur par itération de valeur : sa meilleure suite d'accouplements. */
 function valueIteration(graph: BreedingGraph, p: number, delta: number) {
   const values = new Float64Array(graph.n);
   const stay = 1 - delta * (1 - p / 2);
@@ -118,10 +98,6 @@ function fillExitsWithBestBase(graph: BreedingGraph, values: Float64Array) {
   });
 }
 
-/**
- * Valeur terminale par PL approché : la meilleure fonction de valeur linéaire, pondérée par le stock.
- * Les valeurs sont les duales du PL des accouplements.
- */
 function alpValues(
   graph: BreedingGraph,
   p: number,
@@ -178,7 +154,6 @@ function alpValues(
   return values;
 }
 
-/** Mode succès : valeur de progression vers les couleurs à obtenir, par itération de valeur. */
 function progressValues(graph: BreedingGraph, p: number, delta: number, childReward: number[]) {
   const values = new Float64Array(graph.n);
   const stay = 1 - delta * (1 - p / 2);
@@ -200,7 +175,6 @@ function progressValues(graph: BreedingGraph, p: number, delta: number, childRew
   return values;
 }
 
-/** E[min(X, cap)] pour X de loi de Poisson de moyenne `mean`. */
 function expectedCappedPoisson(mean: number, cap: number) {
   let term = Math.exp(-mean);
   let cumulative = term;
@@ -212,8 +186,6 @@ function expectedCappedPoisson(mean: number, cap: number) {
   }
   return expected;
 }
-
-// ——— Modèle linéaire ———
 
 function sparseColumn(coefficients: Map<number, number>): LpColumn {
   const rows: number[] = [];
@@ -265,7 +237,6 @@ export interface HorizonModel {
   xCols: { op: Operation; col: number }[][];
   capCols: { b: number; s: number; t: number; col: number }[];
   colInfo: ColumnInfo[];
-  /** Stock de départ par sexe. */
   stock: [Float64Array, Float64Array];
   H: number;
   Hs: number;
@@ -291,7 +262,6 @@ function buildModel(graph: BreedingGraph, input: ModelInput, sizeOnly = false): 
   }
   const sexed = (t: number) => t < Hs;
 
-  // Couleurs présentes à chaque étape : le stock, les G1 qu'on peut capturer, et ce qui a pu naître avant.
   const available: [Uint8Array, Uint8Array][] = [];
   const opsAt: Operation[][] = [];
   const recipeOps = graph.recipes.map((recipe: Recipe, index): Operation => ({ f: recipe.a, m: recipe.b, child: recipe.child, recipe: index }));
@@ -327,7 +297,6 @@ function buildModel(graph: BreedingGraph, input: ModelInput, sizeOnly = false): 
     );
   }
 
-  // Lignes : le stock cumulé de chaque couleur (et sexe) à chaque étape, puis le budget de captures.
   const rowOf = new Int32Array(H * 3 * n).fill(-1);
   const rowKey = (node: number, sex: number, t: number) => (t * 3 + sex) * n + node;
   const rhs: number[] = [];
@@ -370,7 +339,6 @@ function buildModel(graph: BreedingGraph, input: ModelInput, sizeOnly = false): 
   const add = (coefficients: Map<number, number>, row: number, value: number) => {
     if (row >= 0 && value !== 0) coefficients.set(row, (coefficients.get(row) ?? 0) + value);
   };
-  /** Une monture prise (ou rendue) à l'étape `from` compte dans le stock de toutes les étapes suivantes. */
   const addFrom = (coefficients: Map<number, number>, node: number, sex: TrackedSex, from: number, value: number) => {
     for (let t = from; t < H; t += 1) add(coefficients, rowOf[rowKey(node, sexed(t) ? sex : ANY, t)]!, value);
   };
@@ -398,7 +366,6 @@ function buildModel(graph: BreedingGraph, input: ModelInput, sizeOnly = false): 
     }
   }
 
-  // Écart de chaque ligne de stock : ce qui reste, valorisé en fin d'horizon.
   const initialBasis: number[] = [];
   rowInfo.forEach((info, row) => {
     if (info.kind !== "stock") return;
@@ -447,7 +414,6 @@ function isCertified(model: HorizonModel) {
   );
 }
 
-/** Valeur duale d'une monture de plus, disponible à partir de l'étape `from`. */
 function stockDual(model: HorizonModel, node: number, sex: TrackedSex, from = 0) {
   let value = 0;
   for (let t = from; t < model.H; t += 1) {
@@ -456,8 +422,6 @@ function stockDual(model: HorizonModel, node: number, sex: TrackedSex, from = 0)
   }
   return value;
 }
-
-// ——— Mode succès ———
 
 function missingVector(graph: BreedingGraph, missing: Record<string, number>) {
   const vector = new Float64Array(graph.n);
@@ -468,10 +432,6 @@ function missingVector(graph: BreedingGraph, missing: Record<string, number>) {
   return vector;
 }
 
-/**
- * Mode succès : les génétons ne comptent presque plus ; une naissance de couleur manquante rapporte,
- * avec des rendements décroissants (lignes « link » : naissances espérées ≥ morceaux de récompense).
- */
 function successObjective(input: StepInput, config: HorizonConfig) {
   const { graph, chance: p } = input;
   const missing = missingVector(graph, input.missing);
@@ -524,8 +484,6 @@ function successObjective(input: StepInput, config: HorizonConfig) {
   return { reward, terminalValue, successHook };
 }
 
-// ——— Arrondi ———
-
 interface ScoredOperation {
   f: number;
   m: number;
@@ -535,10 +493,6 @@ interface ScoredOperation {
   bonus: number;
 }
 
-/**
- * Tentatives entières : la partie entière de la solution, puis un flot de coût minimal place les
- * montures restantes sur les accouplements au meilleur coût réduit.
- */
 function roundAttempts(ops: ScoredOperation[], femaleCap: Float64Array, maleCap: Float64Array, n: number, tolerance = 1e-7) {
   const femalesLeft = Float64Array.from(femaleCap);
   const malesLeft = Float64Array.from(maleCap);
@@ -570,8 +524,6 @@ function roundAttempts(ops: ScoredOperation[], femaleCap: Float64Array, maleCap:
   for (const [edge, index] of edges) attempts[index]! += flow.flowOn(edge);
   return attempts;
 }
-
-// ——— Décision d'une étape ———
 
 export interface Reproduction {
   femaleId: string;
@@ -615,7 +567,6 @@ function decide(input: StepInput, config: HorizonConfig): Decision {
     successHook: success?.successHook ?? null,
   };
 
-  // Réduit l'horizon tant que le tableau dense serait trop gros.
   let merged = config.mergedSteps;
   let sexedSteps = config.sexedSteps;
   for (;;) {
@@ -671,8 +622,6 @@ function decide(input: StepInput, config: HorizonConfig): Decision {
   return { model, unit: input.mode === "success" ? "cibles·étapes" : "génétons", reproductions, capValue: 0 };
 }
 
-// ——— Rééquilibrage : G1 à ajouter ———
-
 export interface RebalanceLine {
   nodeId: string;
   females: number;
@@ -684,7 +633,6 @@ const sexSymbol = (sex: number) => (sex === FEMALE ? "♀" : "♂");
 const sexWord = (sex: number, count = 2) => (sex === FEMALE ? (count > 1 ? "femelles" : "femelle") : count > 1 ? "mâles" : "mâle");
 const round1 = (value: number) => Math.round(value * 10) / 10;
 
-/** Accouplements de la solution où cette couleur sert, triés par nombre de tentatives. */
 function partnersIn(model: HorizonModel, node: number, t: number, sex: number | null = null) {
   const partners: { partner: number; child: number; v: number }[] = [];
   for (const { op, col } of model.xCols[t] ?? []) {
@@ -696,7 +644,6 @@ function partnersIn(model: HorizonModel, node: number, t: number, sex: number | 
   return partners.sort((a, b) => b.v - a.v);
 }
 
-/** Rachète des G1 à un prix au-dessus d'une capture ordinaire : celles qui valent quand même le coup. */
 interface G1Line {
   g1: number;
   females: number;
@@ -804,8 +751,6 @@ function purchaseRebalance(input: StepInput, config: HorizonConfig, decision: De
   });
 }
 
-// ——— Diagnostic : montures sans partenaire ———
-
 interface Served {
   partner: number;
   child: number;
@@ -821,7 +766,6 @@ interface Diagnosis {
   idleAfter: { i: number; s: number; k: number; needs: number[] }[];
 }
 
-/** Bicolores G2 faites de deux G1 : elles se fabriquent en deux étapes à partir de captures. */
 function g1Gates(graph: BreedingGraph) {
   const gates = new Map<number, Recipe>();
   for (const recipe of graph.recipes)
@@ -836,10 +780,6 @@ function g1Gates(graph: BreedingGraph) {
   return gates;
 }
 
-/**
- * Couplage maximal des montures (flot), puis avec des G1 en plus, puis avec des G2 à fabriquer :
- * combien de montures restent sans partenaire, et quelles G1 leur en donneraient un.
- */
 function diagnose(graph: BreedingGraph, stock: [Float64Array, Float64Array], mode: ObjectiveMode, missing: Float64Array, p: number, craftSteps = 2): Diagnosis {
   const n = graph.n;
   const useful = mode === "success" ? ancestorsOf(graph, missing) : null;
@@ -864,14 +804,12 @@ function diagnose(graph: BreedingGraph, stock: [Float64Array, Float64Array], mod
     | { kind: "xarc"; op: Operation; i: number; s: number; partner: number }
     | { kind: "arc"; op: Operation };
 
-  /** `level` 0 : le stock seul ; 1 : avec des G1 en plus ; 2 : avec aussi des G2 à fabriquer. */
   const match = (level: number) => {
     const flow = new FlowGraph(nodeCount);
     const tagged: [edge: number, tag: Tag][] = [];
     const edge = (from: number, to: number, capacity: number, cost: number, tag: Tag) =>
       tagged.push([flow.addEdge(from, to, capacity, cost), tag]);
     for (let node = 0; node < n; node += 1) {
-      // Employer une monture rapporte beaucoup, un peu plus si elle est avancée.
       const reward = -(1000 + graph.gen[node]!);
       if (stock[FEMALE][node]! > 0) edge(source, node, stock[FEMALE][node]!, reward, { kind: "supply" });
       if (stock[MALE][node]! > 0) edge(n + node, sink, stock[MALE][node]!, reward, { kind: "supply" });
@@ -932,7 +870,6 @@ function diagnose(graph: BreedingGraph, stock: [Float64Array, Float64Array], mod
       if (count > 0) add.set(`${base}|${sex}`, { b: base, s: sex, k: count, partners: servedBy(withGates, base, sex), viaGate: [] });
     }
 
-  // Une G2 fabriquée demande des tentatives sur ses deux G1 parentes, réparties entre les sexes.
   const gatesUsed: Diagnosis["gates"] = [];
   const needed: [Float64Array, Float64Array] = [new Float64Array(n), new Float64Array(n)];
   let survival = 0;
@@ -996,7 +933,6 @@ function diagnose(graph: BreedingGraph, stock: [Float64Array, Float64Array], mod
   };
 }
 
-/** Fusionne les G1 que vaut le PL et celles que demande le diagnostic, avec leurs raisons. */
 function rebalanceLines(graph: BreedingGraph, purchases: G1Line[], diagnosis: Diagnosis): G1Line[] {
   const purchaseByBase = new Map(purchases.map((line) => [line.g1, line]));
   const addByKey = new Map(diagnosis.add.map((entry) => [`${entry.b}|${entry.s}`, entry]));
@@ -1073,9 +1009,7 @@ function rebalanceLines(graph: BreedingGraph, purchases: G1Line[], diagnosis: Di
 export interface StepPlan {
   reproductions: Reproduction[];
   rebalance: RebalanceLine[];
-  /** Résumé : montures sans partenaire, et combien les G1 conseillées en débloquent. */
   rebalanceNote: string | null;
-  /** Message d'un calcul qui a dû se replier. */
   fallback: string | null;
 }
 
@@ -1091,7 +1025,6 @@ function rebalanceSummary(diagnosis: Diagnosis | null, lines: RebalanceLine[]) {
   return `${parts.join(" ; ")}.`;
 }
 
-/** Plan de la prochaine étape : reproductions à faire et G1 à ajouter. */
 export function planStep(input: StepInput, config: HorizonConfig = DEFAULT_HORIZON_CONFIG): StepPlan {
   const { graph } = input;
   let decision: Decision | null = null;

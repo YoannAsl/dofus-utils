@@ -4,7 +4,6 @@ import type { Pairing } from "@/lib/mounts/planner";
 
 const pairing = (male: string, female: string): Pairing => ({ pair: [male, female], potion: null, final: false, target: null });
 const pairings = [pairing("MA", "FA"), pairing("MB", "FB"), pairing("MC", "FC")];
-// Le plan montre la troisième ligne d'abord.
 const order = [2, 0, 1];
 
 describe("name queue", () => {

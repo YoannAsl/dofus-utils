@@ -69,7 +69,6 @@ interface Candidate {
   potentialDensity: number;
 }
 
-// An item can take the rune as long as it rolls the rune's characteristic with a positive value.
 function buildCandidate(item: DofusItem, rune: Rune): Candidate | null {
   const match = (item.effects ?? [])
     .filter((effect) => Number(effect.effectId) === Number(rune.effectId))
@@ -117,7 +116,6 @@ function ItemsPage() {
   const group = FM_JOB_GROUPS.find((entry) => entry.id === job) ?? FM_JOB_GROUPS[0];
   const searchKey = `${rune.id}:${group.id}`;
 
-  // DofusDB is only queried on demand; each item type stays cached for the session.
   const candidates = useQuery({
     queryKey: ["fm-candidates", rune.id, group.id],
     enabled: requested === searchKey,

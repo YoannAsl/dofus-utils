@@ -21,7 +21,6 @@ interface Line {
   key: string;
   rune: Rune | null;
   label: string;
-  /** Roll bounds; null for exotic lines, which have no item range. */
   from: number | null;
   to: number | null;
   jet: number;
@@ -36,7 +35,6 @@ function buildLines(item: DofusItem): Line[] {
     let to = Math.abs(Number(effect.to));
     if (!rune || !Number.isFinite(from)) return [];
     if (!Number.isFinite(to) || to < from) to = from;
-    // DofusDB stores maluses as their own effect with a positive range, e.g. 157 "-# Force".
     const negative = !runeEffectIds.has(effect.effectId);
     return [{ key: `effect-${index}`, rune, label: `${negative ? "-" : ""}${rune.effect.label}`, from, to, jet: Math.round((from + to) / 2), negative, exo: false }];
   });
@@ -62,7 +60,6 @@ export function ShatterCalculator() {
   const [status, setStatus] = useState("");
   const [lines, setLines] = useState<Line[]>([]);
   const [coefficientText, setCoefficientText] = useState("100");
-  // Key of the focused line, "" for no focus; null follows the best result until the user picks one.
   const [focusKey, setFocusKey] = useState<string | null>(null);
   const loadToken = useRef(0);
   const coefficients = useBrisageStore((state) => state.coefficients);
@@ -118,7 +115,6 @@ export function ShatterCalculator() {
 
   function recordInLog() {
     if (!item) return;
-    // Expected rune counts for the chosen focus, rounded to whole runes as the game drops them.
     const focusIndex = activeLines.findIndex((line) => line.key === selectedFocus);
     const totals = new Map<Rune, number>();
     activeLines.forEach((line, index) => {
@@ -387,7 +383,6 @@ export function ShatterCalculator() {
 
 const rankClasses = ["", "bg-success text-background", "bg-success/70 text-background", "bg-success/40 text-foreground"];
 
-/** Marks the top three shatter outcomes. */
 function Ranked({ rank, children }: { rank: number | undefined; children: string }) {
   return (
     <span className={cn("inline-flex items-center gap-1.5", rank === 1 && "font-semibold text-success")}>

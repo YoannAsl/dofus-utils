@@ -11,7 +11,7 @@ from PIL import Image
 try:
     from winrt.windows.graphics.imaging import BitmapPixelFormat, SoftwareBitmap
     from winrt.windows.media.ocr import OcrEngine
-except ImportError:  # Without the winrt packages, OCR goes through PowerShell (~150 ms slower per image).
+except ImportError:
     OcrEngine = None
 
 _engine = None
@@ -22,10 +22,8 @@ def in_process_available() -> bool:
 
 
 def recognize_image(image: Image.Image) -> dict:
-    """OCRs an image held in memory; same payload shape as run_windows_ocr."""
     if OcrEngine is None:
         with TemporaryDirectory() as tmp:
-            # BMP: compressing a PNG of an upscaled frame costs ~350 ms; the OCR reads BMP just as fast.
             path = Path(tmp) / "capture.bmp"
             image.save(path)
             return run_windows_ocr(path)
@@ -35,7 +33,6 @@ def recognize_image(image: Image.Image) -> dict:
         _engine = OcrEngine.try_create_from_user_profile_languages()
         if _engine is None:
             raise RuntimeError("Windows OCR engine is not available for the current user profile language.")
-    # Grayscale reads the same text as colour and the engine runs ~25 % faster on it.
     gray = image.convert("L")
     bitmap = SoftwareBitmap.create_copy_from_buffer(gray.tobytes(), BitmapPixelFormat.GRAY8, gray.width, gray.height)
     result = asyncio.run(_recognize(bitmap))

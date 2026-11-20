@@ -5,33 +5,23 @@ import { parseMountName } from "@/lib/mounts/names";
 import { likelyChild, successChance } from "@/lib/mounts/offspring";
 import type { Mount, MountFamilyId, Sex } from "@/lib/mounts/types";
 
-/** Niveau des parents supposé par le plan. */
 const PARENT_LEVEL = 40;
 const CAPTURE_BUDGET = 30;
-/** Écart de sexes à partir duquel on conseille une potion pour la couleur visée. */
 const POTION_MARGIN = 3;
 
 export interface PlannerInput {
   family: MountFamilyId;
-  /** Noms de 13 lettres des montures fécondes de l'étable. */
   mounts: string[];
   mode?: ObjectiveMode;
-  /** Mode succès : naissances voulues par couleur (G2 et plus). */
   missing?: Record<string, number>;
-  /** Mode succès : n'accoupler que vers les couleurs à obtenir. */
   avoidObtained?: boolean;
 }
 
 export interface Pairing {
-  /** Mâle puis femelle. */
   pair: [string, string];
-  /** Sexe à forcer avec une potion pour le petit, quand sa couleur manque de ce sexe. */
   potion: Sex | null;
-  /** Dernier accouplement de deux montures en bout de lignée, avant le brisage. */
   final: boolean;
-  /** Couleur que le plan vise. */
   intended?: string;
-  /** Couleur que le jeu visera avec ces deux montures. */
   target: string | null;
 }
 
@@ -46,7 +36,6 @@ export interface StablePlan {
   read: number;
   rejected: { index: number; code: string }[];
   pairings: Pairing[];
-  /** Tentatives du plan sans monture libre pour les faire. */
   unmatched: number;
   rebalance: RebalanceLine[];
   rebalanceNote: string | null;
@@ -56,7 +45,6 @@ export interface StablePlan {
 export class PlannerError extends Error {}
 
 interface PlannedMount extends Mount {
-  /** Couleur dont la monture porte les gènes : son parent le plus avancé, s'il dépasse sa couleur. */
   geneticId: string;
 }
 
@@ -76,17 +64,12 @@ function colourStats<T extends Mount>(mounts: T[], colourOf: (mount: T) => strin
   return { counts, females };
 }
 
-/** Partenaires de l'autre sexe qu'a déjà cette couleur dans l'étable. */
 function partnersAvailable(stats: ColourStats, colourId: string, sex: Sex) {
   const total = stats.counts[colourId] ?? 0;
   const female = stats.females[colourId] ?? 0;
   return sex === "M" ? female : total - female;
 }
 
-/**
- * Une Amande née d'une Ébène-Indigo se croise comme une Ébène-Indigo : la couleur génétique est
- * celle du parent le plus avancé, quand il dépasse la monture. À égalité, celle qui a le plus de partenaires.
- */
 function geneticColour(mount: Mount, family: MountFamily, stats: ColourStats) {
   const generation = family.byId.get(mount.colourId)?.generation;
   if (generation === undefined) return mount.colourId;
@@ -103,7 +86,6 @@ function geneticColour(mount: Mount, family: MountFamily, stats: ColourStats) {
   return a < b ? a : b;
 }
 
-/** Potion conseillée : la couleur visée, paire, a trois montures d'un sexe de plus que de l'autre. */
 function potionFor(family: MountFamily, childId: string, { counts, females }: ColourStats): Sex | null {
   const generation = family.byId.get(childId)?.generation;
   if (!generation || generation < 2 || generation % 2 !== 0) return null;
@@ -118,10 +100,6 @@ const isRich = (mount: PlannedMount, family: MountFamily) =>
   family.byId.get(mount.geneticId)!.generation > family.byId.get(mount.colourId)!.generation;
 const geneticGeneration = (mount: PlannedMount, family: MountFamily) => family.byId.get(mount.geneticId)!.generation;
 
-/**
- * Une monture « riche » que le plan laisse de côté s'accouple quand même : avec une monture qui
- * donne une recette, une G1, ou une monture dont la couleur a trop de ce sexe.
- */
 function pairRichLeftovers(leftovers: PlannedMount[], family: MountFamily, stats: ColourStats) {
   const surplus = (mount: PlannedMount) => {
     const total = stats.counts[mount.geneticId] ?? 0;
@@ -151,13 +129,11 @@ function pairRichLeftovers(leftovers: PlannedMount[], family: MountFamily, stats
   return pairs;
 }
 
-/** Couleurs qui ne servent de parent à aucune recette : la fin de la lignée. */
 function lineageEnds(family: MountFamily) {
   const parents = new Set(family.colours.flatMap((colour) => colour.recipes.flat()));
   return new Set(family.colours.filter((colour) => !parents.has(colour.id)).map((colour) => colour.id));
 }
 
-/** Les montures en bout de lignée se croisent une dernière fois entre elles, par génération. */
 function pairLineageEnds(leftovers: PlannedMount[], family: MountFamily) {
   const ends = lineageEnds(family);
   const males = new Map<number, PlannedMount[]>();
@@ -218,7 +194,6 @@ export function planStable({ family: familyId, mounts: names, mode = "genetons",
     avoidObtained: success && avoidObtained,
   });
 
-  // Les tentatives qui rapportent le plus de génétons d'abord : elles prennent les montures en premier.
   const genetons = (attempts: number, femaleId: string, maleId: string) =>
     Math.round(attempts * chance * (2 ** (family.byId.get(femaleId)!.generation - 1) + 2 ** (family.byId.get(maleId)!.generation - 1)) * 100) / 100;
   const reproductions = step.reproductions
@@ -257,7 +232,6 @@ export function planStable({ family: familyId, mounts: names, mode = "genetons",
         unmatched += 1;
         continue;
       }
-      // Parmi les montures de ces couleurs, un couple dont le jeu vise bien la couleur voulue.
       let chosen: [PlannedMount, PlannedMount] | null = null;
       for (const male of distinctLineages(males)) {
         for (const female of distinctLineages(femalesLeft))
@@ -293,7 +267,6 @@ export function planStable({ family: familyId, mounts: names, mode = "genetons",
   ))
     pairings.push({ pair: [male.code, female.code], potion: null, final: true, target: childOf(male, female) });
 
-  // G1 aux parents d'autres couleurs : leurs petits visent moins souvent la bonne couleur.
   const inPairs = new Set(pairings.flatMap((pairing) => pairing.pair));
   const impures = mounts
     .filter(

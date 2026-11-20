@@ -4,7 +4,6 @@ import { getMountFamily } from "@/lib/mounts/family";
 import type { Pairing } from "@/lib/mounts/planner";
 
 const volkorne = getMountFamily("volkorne");
-// Texte lu par Windows OCR sur de vraies cartes « Vous avez obtenu ».
 const birth = { child: "Roux", generation: 3, left_parent: "Pourpre et Orchidee", right_parent: "Pourpre ct Ébéne", sex: "F" as const, father: "right" as const };
 const gameBirth = { child: "Émeraude et Pourpre", generation: 6, left_parent: "Pourpre", right_parent: "Emeraude", sex: "M" as const };
 
@@ -28,7 +27,6 @@ describe("birth reading", () => {
   });
 
   const pairing = (pair: [string, string]): Pairing => ({ pair, potion: null, final: false, target: "roux" });
-  // Deux accouplements réciproques : mêmes couleurs, père et mère inversés.
   const reciprocal = [pairing(["MEBPOEBEBPOPO", "FORPOORORPOPO"]), pairing(["MORPOORORPOPO", "FEBPOEBEBPOPO"])];
 
   it("takes the father and mother from the matching pairing, skipping done ones", () => {
@@ -39,7 +37,6 @@ describe("birth reading", () => {
   it("tells reciprocal pairings apart by the parent card marked ♂", () => {
     expect(readBirth(volkorne, birth, reciprocal)).toMatchObject({ pairingIndex: 0, fatherId: "pourpre_ebene", names: { F: "FROROEBPOORPO" } });
     expect(readBirth(volkorne, { ...birth, father: "left" }, reciprocal)).toMatchObject({ pairingIndex: 1, names: { F: "FROROORPOEBPO" } });
-    // Le ♂ lu prime sur une ligne déjà faite : c'est elle qu'on refait.
     expect(readBirth(volkorne, birth, reciprocal, new Set([0]))).toMatchObject({ pairingIndex: 0 });
   });
 

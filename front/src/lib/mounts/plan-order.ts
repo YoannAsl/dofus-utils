@@ -6,7 +6,6 @@ export interface PlanRow {
   index: number;
 }
 
-/** Les accouplements par génération du petit visé, la plus haute d'abord : c'est là qu'une réussite rapporte le plus. */
 export function groupPairings(family: MountFamily, pairings: Pairing[]) {
   const byGeneration = new Map<number, PlanRow[]>();
   const finalRows: PlanRow[] = [];
@@ -35,7 +34,6 @@ export function groupPairings(family: MountFamily, pairings: Pairing[]) {
   return { groups, finalRows };
 }
 
-/** Les accouplements dans l’ordre où le plan les montre. */
 export function pairingOrder(family: MountFamily, pairings: Pairing[]) {
   const { groups, finalRows } = groupPairings(family, pairings);
   return [...groups.flatMap((group) => group.rows), ...finalRows].map((row) => row.index);

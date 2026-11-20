@@ -5,7 +5,6 @@ import { ItemIcon, Meta } from "@/components/common";
 import { Input } from "@/components/ui/input";
 import { itemName, marketNamePattern, searchEquipment, type DofusItem } from "@/lib/dofusdb";
 
-/** Debounced DofusDB search over forgemageable equipment, shared by the calculator and the log form. */
 export function EquipmentSearch({
   id,
   value,
@@ -70,7 +69,6 @@ export function EquipmentSearch({
       <PopoverContent
         align="start"
         className="max-h-80 w-(--radix-popover-trigger-width) gap-0 overflow-y-auto p-1"
-        // Keep typing in the input: don't steal focus, and clicks on the input itself don't count as outside.
         onOpenAutoFocus={(event) => event.preventDefault()}
         onInteractOutside={(event) => {
           if (container.current?.contains(event.target as Node)) event.preventDefault();

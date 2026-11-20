@@ -43,7 +43,6 @@ export const runesByName = [...runes].sort((a, b) => a.name.localeCompare(b.name
 export const xpRunes = runesByName.filter((rune) => rune.density > 0);
 export const runeById = new Map(runes.map((rune) => [String(rune.id), rune]));
 
-/** Tiers of the same characteristic, keyed by tier rank. */
 export type RuneFamily = Map<TierRank, Rune>;
 const familyMap = new Map<string, RuneFamily>();
 for (const rune of runes) {
@@ -79,7 +78,6 @@ export function findRuneByOcrName(itemName: string | null | undefined) {
   return runes.find((rune) => normalizeRuneNameForMatch(rune.name) === target) ?? null;
 }
 
-// A characteristic shatters into its smallest rune; the other tiers only matter for prices elsewhere.
 export const baseRuneByCharacteristic = new Map<number, Rune>();
 for (const rune of runes) {
   if (rune.characteristic == null || rune.effect.weight <= 0) continue;

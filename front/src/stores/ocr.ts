@@ -18,13 +18,11 @@ export type OcrTarget = Rune | DofusItem;
 interface OcrState {
   open: boolean;
   loading: boolean;
-  /** A capture is waiting for the user to apply or dismiss it; polling pauses meanwhile. */
   pending: boolean;
   status: string;
   result: OcrResult | null;
   previewUrl: string | null;
   targetId: string;
-  /** Catalogue items matching the capture, offered as targets alongside runes. */
   items: DofusItem[];
   priceInput: string;
   updatedRuneId: string | null;
@@ -50,7 +48,6 @@ let openMarket: () => void = () => {};
 
 let imagePasteHandler: ((file: File | Blob) => void) | null = null;
 
-/** Lets a page take pasted images for itself (the stable reader) instead of the price OCR. */
 export function setImagePasteHandler(handler: (file: File | Blob) => void) {
   imagePasteHandler = handler;
   return () => {
@@ -63,7 +60,6 @@ export function handlePastedImage(file: File | Blob) {
   else processOcrImage(file);
 }
 
-/** Registers how to show the catalogue when a capture needs the user to pick its item. */
 export function setOcrMarketNavigator(navigate: () => void) {
   openMarket = navigate;
 }
@@ -74,7 +70,6 @@ export function getOcrTarget(state: OcrState): OcrTarget | null {
 
 export function getOcrItemPrice(result: OcrResult | null, id: string) {
   if (!isBreedingFuel(id)) return getOcrMarketPrice(result);
-  // Fuels are priced per unit: only the ×1 lot is a usable price.
   const singleLot = result?.lots?.find((lot) => Number(lot.quantity) === 1);
   return parsePrice(singleLot?.total_price);
 }
@@ -118,7 +113,6 @@ export function applySelectedOcrPrice() {
   if (price) applyPrice(target, price);
 }
 
-/** Makes a catalogue item the capture's target, from the item's detail panel. */
 export function associateOcrItem(item: DofusItem) {
   const { result, loading, items } = useOcrStore.getState();
   if (!result || loading) return;
@@ -163,7 +157,6 @@ async function assertServerReady() {
   if (!payload?.ok) throw new Error("serveur OCR invalide; relance start.ps1");
 }
 
-/** Reads a capture; applies the price directly when the item and price are unambiguous. */
 export async function processOcrImage(file: File | Blob) {
   if (!isImageFile(file)) {
     set({ status: "Image requise pour l'OCR." });
@@ -224,10 +217,6 @@ export async function processOcrImage(file: File | Blob) {
   return true;
 }
 
-/**
- * Picks up ShareX captures posted to the local server. The cursor is only advanced once a
- * capture is applied or dismissed, so a capture is not lost if the page closes meanwhile.
- */
 export function startCapturePolling() {
   let timer: ReturnType<typeof setTimeout> | undefined;
   let stopped = false;
@@ -249,7 +238,6 @@ export function startCapturePolling() {
         if (!useOcrStore.getState().pending) acknowledgeCapture();
       }
     } catch {
-      // The local server may be stopped or restarting. Try again on the next poll.
     } finally {
       if (!stopped) timer = setTimeout(poll, 1000);
     }

@@ -4,7 +4,6 @@ export class PlannerCancelled extends Error {}
 
 let cancelRunning: (() => void) | null = null;
 
-/** Calcule le plan dans un worker ; un nouvel appel annule le précédent, dont la promesse échoue en PlannerCancelled. */
 export function runPlanner(input: PlannerInput): Promise<StablePlan> {
   cancelRunning?.();
   const worker = new Worker(new URL("./planner.worker.ts", import.meta.url), { type: "module" });

@@ -1,18 +1,12 @@
 import { colourType, type MountFamily, pairKey } from "@/lib/mounts/family";
 import type { Mount } from "@/lib/mounts/types";
 
-/** Niveau cumulé des deux parents qu'on suppose pour les chances affichées (deux parents niveau 40). */
 export const DEFAULT_PARENT_LEVELS = 80;
 
-/** Part des naissances qui visent la génération la plus haute possible. */
 export function successChance(parentLevels = DEFAULT_PARENT_LEVELS) {
   return Math.min(1, Math.max(0, (30 + 0.15 * parentLevels) / 100));
 }
 
-/**
- * Poids génétiques d'une monture : 5 pour sa couleur, 3 pour chacun de ses parents ;
- * une couleur unie jusqu'à la G7 compte 4,5 fois plus.
- */
 function geneticWeights(mount: Mount, family: MountFamily) {
   const entries: [string, number][] = [[mount.colourId, 5], ...mount.parentIds.map((id): [string, number] => [id, 3])];
   return entries.map(([id, weight]) => {
@@ -24,12 +18,10 @@ function geneticWeights(mount: Mount, family: MountFamily) {
 
 export interface OffspringChance {
   colourId: string;
-  /** Couleur de la génération la plus haute possible avec ce couple. */
   target: boolean;
   probability: number;
 }
 
-/** Chances de chaque couleur pour le petit d'un couple. Triées : réussites puis probabilité décroissante. */
 export function offspringChances(family: MountFamily, father: Mount, mother: Mount, parentLevels = DEFAULT_PARENT_LEVELS): OffspringChance[] {
   if (!family.byId.has(father.colourId) || !family.byId.has(mother.colourId)) return [];
   const fatherWeights = geneticWeights(father, family);
@@ -62,7 +54,6 @@ export function offspringChances(family: MountFamily, father: Mount, mother: Mou
     .sort((a, b) => Number(b.target) - Number(a.target) || b.probability - a.probability || a.colourId.localeCompare(b.colourId));
 }
 
-/** Couleur que le jeu vise avec ce couple. */
 export function likelyChild(family: MountFamily, father: Mount, mother: Mount) {
   return offspringChances(family, father, mother)[0]?.colourId ?? null;
 }
@@ -70,12 +61,10 @@ export function likelyChild(family: MountFamily, father: Mount, mother: Mount) {
 export interface BirthOutcome {
   labels: string[];
   colourId: string;
-  /** Nom du petit sans la lettre du sexe. */
   nameSuffix: string;
   probability: number;
 }
 
-/** Naissances à prévoir pour un couple, avec le nom à donner au petit. */
 export function birthOutcomes(family: MountFamily, father: Mount, mother: Mount): BirthOutcome[] {
   const parentsType = father.type + mother.type;
   const outcomes: Omit<BirthOutcome, "probability">[] = [];

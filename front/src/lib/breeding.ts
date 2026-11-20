@@ -7,7 +7,6 @@ export interface BreedingFuel {
   name: string;
   iconId: number;
   recharge: number;
-  /** Gauge level the fuel stops at; null fills up to the gauge maximum. */
   cap: number | null;
 }
 
@@ -17,10 +16,6 @@ export function isBreedingFuel(id: string | number) {
   return fuelIds.has(Number(id));
 }
 
-/**
- * Cost of 10 000 recharge points per fuel, and the cost of filling the tier the fuel covers
- * (from the previous cap up to its own) with whole units.
- */
 export function calculateBreedingCosts(fuels: BreedingFuel[], readPrice: (id: number) => number | null) {
   const caps = [...new Set(fuels.map((fuel) => fuel.cap ?? BREEDING_GAUGE_MAX))].sort((a, b) => a - b);
   const tierWidths = new Map(caps.map((cap, index) => [cap, cap - (caps[index - 1] ?? 0)]));

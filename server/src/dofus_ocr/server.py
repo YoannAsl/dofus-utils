@@ -23,12 +23,9 @@ from . import windows_ocr
 MAX_UPLOAD_BYTES = 25 * 1024 * 1024
 CAPTURES_PATH = "/api/captures"
 OCR_PATH = "/api/ocr"
-# Raw OCR lines, for captures that are not auction popups (the mount stable list).
 OCR_TEXT_PATH = "/api/ocr/text"
-# Births seen in the Dofus window and queue keys pressed in it; each request waits for the next one and keeps the watcher running.
 BIRTHS_PATH = "/api/births"
 BIRTHS_WAIT_SECONDS = 20.0
-# The app sends the baby's name here: a background browser tab cannot write the clipboard itself.
 CLIPBOARD_PATH = "/api/clipboard"
 MOUNT_NAME = re.compile(r"^[MF][A-Z]{12}$")
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
@@ -36,7 +33,6 @@ PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 
 class RunesOcrHandler(SimpleHTTPRequestHandler):
     server_version = "DofusRunesOcr/0.1"
-    # Windows can map .js to text/plain in the registry, which browsers refuse for module scripts.
     extensions_map = {
         **SimpleHTTPRequestHandler.extensions_map,
         ".js": "text/javascript",
@@ -74,7 +70,6 @@ class RunesOcrHandler(SimpleHTTPRequestHandler):
             self._send_json(build_health_payload())
             return
 
-        # The app routes in the browser (/brisage, /runes…): serve index.html for page URLs.
         if "." not in path.rsplit("/", 1)[-1] and not Path(self.translate_path(path)).is_file():
             self.path = "/index.html"
         super().do_GET()
@@ -120,8 +115,6 @@ class RunesOcrHandler(SimpleHTTPRequestHandler):
         return False
 
     def _allow_app_request(self) -> bool:
-        """A request from the app's own page: browsers set Sec-Fetch-Site, other sites get cross-site.
-        The Host check stops a page on another name that resolves to this machine."""
         if (
             self.client_address[0] == "127.0.0.1"
             and self.headers.get("Host") in self._local_hosts()
@@ -155,7 +148,6 @@ class RunesOcrHandler(SimpleHTTPRequestHandler):
         cursor = parse_qs(query).get("after", [""])[0]
         session, _, sequence = cursor.partition(":")
         watcher = self.birth_watcher
-        # A new listener starts from now: it must not copy a birth it never saw happen.
         after = watcher.sequence
         if session == self.capture_session and len(sequence) <= 16 and sequence.isdecimal():
             after = int(sequence)
@@ -223,7 +215,6 @@ class RunesOcrHandler(SimpleHTTPRequestHandler):
         return image_bytes
 
     def _run_ocr_upload(self, read):
-        """Runs Windows OCR on the uploaded image and returns read(ocr_payload, image_path)."""
         content_type = self.headers.get("Content-Type", "application/octet-stream").split(";", 1)[0]
         content_type = content_type.strip().lower()
         if content_type != "application/octet-stream" and not content_type.startswith("image/"):
@@ -252,7 +243,6 @@ class RunesOcrHandler(SimpleHTTPRequestHandler):
 
 
 def ocr_text_payload(ocr_payload: dict) -> dict:
-    """Keeps the text of each OCR line and its words with their boxes."""
     lines = []
     for line in ocr_payload.get("lines") or []:
         words = [

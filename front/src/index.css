@@ -131,7 +131,6 @@
     @apply font-sans;
     }
 }
-/* Outcome colors used by badges, gains and the shatter ranking. */
 :root {
     --success: oklch(0.52 0.12 155);
     --success-muted: oklch(0.95 0.04 155);
