@@ -17,11 +17,11 @@ export function describeMount(family: MountFamily, code: string) {
 }
 
 /** Le nom à copier, avec dessous sa couleur et ses parents : « Amande · de Orchidée-Ébène × Pourpre-Ébène ». */
-export function MountCell({ family, code }: { family: MountFamily; code: string }) {
+export function MountCell({ family, code, onCopy, active }: { family: MountFamily; code: string; onCopy?: (code: string) => void; active?: boolean }) {
   const mount = parseMountName(code, family);
   return (
     <span className="flex min-w-0 flex-col items-start">
-      <MountCode family={family} code={code} className="-mx-1" />
+      <MountCode family={family} code={code} className={cn("-mx-1", active && "bg-primary/10 text-primary")} onCopy={onCopy} />
       {mount ? (
         <span className="max-w-full truncate text-xs text-muted-foreground" title={describeMount(family, code) ?? undefined}>
           <span className="font-medium text-foreground/80">{colourLabel(family, mount.colourId)}</span>
@@ -33,12 +33,15 @@ export function MountCell({ family, code }: { family: MountFamily; code: string 
 }
 
 /** Nom de monture qui se copie, pour le chercher dans l'étable en jeu. */
-export function MountCode({ family, code, className }: { family: MountFamily; code: string; className?: string }) {
+export function MountCode({ family, code, className, onCopy }: { family: MountFamily; code: string; className?: string; onCopy?: (code: string) => void }) {
   const description = describeMount(family, code);
   return (
     <button
       type="button"
-      onClick={() => copyText(code)}
+      onClick={() => {
+        copyText(code);
+        onCopy?.(code);
+      }}
       title={description ? `${description} — cliquer pour copier` : "Copier le nom"}
       aria-label={`Copier ${code}${description ? ` (${description})` : ""}`}
       className={cn(

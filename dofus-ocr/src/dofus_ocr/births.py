@@ -21,6 +21,7 @@ from typing import Callable
 
 from PIL import Image, ImageChops, ImageStat
 
+from .keys import KeyHook
 from .windows_ocr import recognize_image
 
 # Captures are enlarged up to about this width before OCR: Windows OCR misreads the small card text otherwise.
@@ -85,6 +86,14 @@ class Birth:
     sex: str | None
     # Which parent card shows ♂: the game puts the male on either side.
     father: str | None = None
+
+
+@dataclass(frozen=True)
+class KeyPress:
+    """A queue key pressed in Dofus: « paste » (with the pasted mount name), « next » or « previous »."""
+
+    action: str
+    text: str | None = None
 
 
 def normalize(text: str) -> str:
@@ -371,19 +380,22 @@ def _difference(a: Image.Image, b: Image.Image) -> float:
 
 
 class BirthWatcher:
-    """Looks at the Dofus window once a second while the app is listening, and keeps the births it sees."""
+    """Looks at the Dofus window once a second while the app is listening, and keeps the births it sees,
+    along with the queue keys pressed in Dofus meanwhile."""
 
     def __init__(
         self,
         grab: Callable[[], Image.Image | None] = grab_dofus,
         ocr: Callable[[Image.Image], tuple[dict, Image.Image]] = _ocr_image,
         interval: float = WATCH_INTERVAL_SECONDS,
+        watch_keys: bool = True,
     ) -> None:
         self._grab = grab
         self._ocr = ocr
         self._interval = interval
         self._condition = Condition()
-        self._events: deque[tuple[int, Birth]] = deque(maxlen=50)
+        self._events: deque[tuple[int, Birth | KeyPress]] = deque(maxlen=50)
+        self._keys = KeyHook(lambda action, text: self._add(KeyPress(action, text)), lambda: dofus_window() is not None) if watch_keys else None
         self._sequence = 0
         self._last_demand = 0.0
         self._thread: Thread | None = None
@@ -395,8 +407,8 @@ class BirthWatcher:
     def sequence(self) -> int:
         return self._sequence
 
-    def wait(self, after: int, timeout: float) -> tuple[int, list[Birth], str]:
-        """Waits up to `timeout` for births after `after`; keeps the watcher running meanwhile."""
+    def wait(self, after: int, timeout: float) -> tuple[int, list[Birth | KeyPress], str]:
+        """Waits up to `timeout` for births and key presses after `after`; keeps the watcher running meanwhile."""
         deadline = time.monotonic() + timeout
         with self._condition:
             self._demand()
@@ -415,14 +427,26 @@ class BirthWatcher:
             self._thread.start()
 
     def _run(self) -> None:
-        while time.monotonic() - self._last_demand < IDLE_STOP_SECONDS:
-            started = time.monotonic()
-            try:
-                self.step()
-            except Exception as exc:  # A failed frame must not stop the watcher.
-                self.status = f"error: {exc}"
-            time.sleep(max(0.0, self._interval - (time.monotonic() - started)))
-        self.status = "idle"
+        if self._keys:
+            self._keys.start()
+        try:
+            while time.monotonic() - self._last_demand < IDLE_STOP_SECONDS:
+                started = time.monotonic()
+                try:
+                    self.step()
+                except Exception as exc:  # A failed frame must not stop the watcher.
+                    self.status = f"error: {exc}"
+                time.sleep(max(0.0, self._interval - (time.monotonic() - started)))
+        finally:
+            if self._keys:
+                self._keys.stop()
+            self.status = "idle"
+
+    def _add(self, event: Birth | KeyPress) -> None:
+        with self._condition:
+            self._sequence += 1
+            self._events.append((self._sequence, event))
+            self._condition.notify_all()
 
     def step(self) -> None:
         frame = self._grab()
@@ -447,15 +471,14 @@ class BirthWatcher:
         if previous is not None and _same_card(previous, birth) and (previous.sex is not None or birth.sex is None):
             return
         self._card = birth
-        with self._condition:
-            self._sequence += 1
-            self._events.append((self._sequence, birth))
-            self._condition.notify_all()
+        self._add(birth)
 
 
 def _same_card(a: Birth, b: Birth) -> bool:
     return (a.child, a.left_parent, a.right_parent) == (b.child, b.left_parent, b.right_parent)
 
 
-def birth_to_dict(birth: Birth) -> dict:
-    return asdict(birth)
+def event_to_dict(event: Birth | KeyPress) -> dict:
+    if isinstance(event, KeyPress):
+        return {"type": event.action, "text": event.text}
+    return {"type": "birth", **asdict(event)}

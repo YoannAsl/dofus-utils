@@ -14,7 +14,7 @@ from urllib.parse import parse_qs
 from uuid import uuid4
 
 from . import births as births_module
-from .births import BirthWatcher, birth_to_dict
+from .births import BirthWatcher, event_to_dict
 from .parser import parse_auction_ocr, result_to_dict
 from .windows_ocr import run_windows_ocr
 from . import windows_ocr
@@ -25,7 +25,7 @@ CAPTURES_PATH = "/api/captures"
 OCR_PATH = "/api/ocr"
 # Raw OCR lines, for captures that are not auction popups (the mount stable list).
 OCR_TEXT_PATH = "/api/ocr/text"
-# Births seen in the Dofus window; each request waits for the next one and keeps the watcher running.
+# Births seen in the Dofus window and queue keys pressed in it; each request waits for the next one and keeps the watcher running.
 BIRTHS_PATH = "/api/births"
 BIRTHS_WAIT_SECONDS = 20.0
 # The app sends the baby's name here: a background browser tab cannot write the clipboard itself.
@@ -155,11 +155,11 @@ class RunesOcrHandler(SimpleHTTPRequestHandler):
         after = watcher.sequence
         if session == self.capture_session and len(sequence) <= 16 and sequence.isdecimal():
             after = int(sequence)
-        latest, births, status = watcher.wait(after, BIRTHS_WAIT_SECONDS)
+        latest, events, status = watcher.wait(after, BIRTHS_WAIT_SECONDS)
         self._send_json(
             {
                 "cursor": f"{self.capture_session}:{latest}",
-                "births": [birth_to_dict(birth) for birth in births],
+                "events": [event_to_dict(event) for event in events],
                 "status": status,
             }
         )
@@ -308,6 +308,7 @@ def build_health_payload() -> dict:
         "server_file": str(Path(__file__).resolve()),
         "windows_ocr_file": str(Path(windows_ocr.__file__).resolve()),
         "births": True,
+        "keys": True,
     }
 
 

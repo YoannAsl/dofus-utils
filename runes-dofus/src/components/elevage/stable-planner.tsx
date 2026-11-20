@@ -16,9 +16,11 @@ import type { ObjectiveMode } from "@/lib/mounts/horizon";
 import { formatChance } from "@/lib/format";
 import { parseMountName } from "@/lib/mounts/names";
 import { birthOutcomes } from "@/lib/mounts/offspring";
-import type { Pairing, StablePlan } from "@/lib/mounts/planner";
+import type { StablePlan } from "@/lib/mounts/planner";
+import type { QueuedName } from "@/lib/mounts/name-queue";
+import { groupPairings, type PlanRow } from "@/lib/mounts/plan-order";
 import { cn } from "@/lib/utils";
-import { setBirthWatch, setBirthWatchFamily, useBirthStore, type WatchStatus } from "@/stores/births";
+import { followCopiedName, setBirthWatch, setBirthWatchFamily, useBirthStore, type WatchStatus } from "@/stores/births";
 import { setImagePasteHandler } from "@/stores/ocr";
 import {
   clearStable,
@@ -32,40 +34,6 @@ import {
   togglePairingDone,
   useStableStore,
 } from "@/stores/stable";
-
-interface PlanRow {
-  pairing: Pairing;
-  index: number;
-}
-
-/** Les accouplements par génération du petit visé, la plus haute d'abord : c'est là qu'une réussite rapporte le plus. */
-function groupPairings(family: MountFamily, pairings: Pairing[]) {
-  const byGeneration = new Map<number, PlanRow[]>();
-  const finalRows: PlanRow[] = [];
-  pairings.forEach((pairing, index) => {
-    const row = { pairing, index };
-    if (pairing.final) {
-      finalRows.push(row);
-      return;
-    }
-    const generation = (pairing.target && family.byId.get(pairing.target)?.generation) || 0;
-    if (!byGeneration.has(generation)) byGeneration.set(generation, []);
-    byGeneration.get(generation)!.push(row);
-  });
-  const groups = [...byGeneration.entries()]
-    .sort(([a], [b]) => b - a)
-    .map(([generation, rows]) => {
-      const counts = new Map<string | null, number>();
-      rows.forEach(({ pairing }) => counts.set(pairing.target, (counts.get(pairing.target) ?? 0) + 1));
-      const targets = [...counts.entries()]
-        .map(([id, count]) => ({ id, count, name: id ? colourLabel(family, id) : "?" }))
-        .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, "fr"));
-      const rank = new Map(targets.map((target, position) => [target.id, position]));
-      rows.sort((a, b) => rank.get(a.pairing.target)! - rank.get(b.pairing.target)! || a.index - b.index);
-      return { generation, rows, targets };
-    });
-  return { groups, finalRows };
-}
 
 function CaptureDrop({ family }: { family: MountFamily }) {
   const { reading, status, error, lastCapture } = useStableStore();
@@ -319,7 +287,7 @@ function StableInput({ family }: { family: MountFamily }) {
 }
 
 /** Les deux noms possibles du petit, mâle et femelle, à copier dès la naissance. */
-function BabyNames({ family, suffix, className }: { family: MountFamily; suffix: string; className?: string }) {
+function BabyNames({ family, suffix, className, onCopy }: { family: MountFamily; suffix: string; className?: string; onCopy?: (code: string) => void }) {
   return (
     <span className={cn("flex flex-wrap items-center gap-x-3 gap-y-0.5", className)}>
       {(["M", "F"] as const).map((sex) => (
@@ -327,15 +295,17 @@ function BabyNames({ family, suffix, className }: { family: MountFamily; suffix:
           <span className="text-muted-foreground" aria-hidden>
             {sex === "M" ? "♂" : "♀"}
           </span>
-          <MountCode family={family} code={`${sex}${suffix}`} className="text-xs" />
+          <MountCode family={family} code={`${sex}${suffix}`} className="text-xs" onCopy={onCopy} />
         </span>
       ))}
     </span>
   );
 }
 
-function PairingRow({ family, row, done }: { family: MountFamily; row: PlanRow; done: boolean }) {
+/** `queued` : le parent de cette ligne qui est dans le presse-papiers. */
+function PairingRow({ family, row, done, queued }: { family: MountFamily; row: PlanRow; done: boolean; queued: "male" | "female" | null }) {
   const [open, setOpen] = useState(false);
+  const follow = (code: string) => followCopiedName(family.id, code);
   const { pairing, index } = row;
   const targetId = pairing.target;
   const male = parseMountName(pairing.pair[0], family);
@@ -346,15 +316,18 @@ function PairingRow({ family, row, done }: { family: MountFamily; row: PlanRow; 
 
   return (
     <>
-      <TableRow className={cn(done && "text-muted-foreground line-through decoration-muted-foreground/60")}>
+      <TableRow
+        className={cn(done && "text-muted-foreground line-through decoration-muted-foreground/60", queued && "bg-primary/5 hover:bg-primary/10")}
+        aria-current={queued ? "step" : undefined}
+      >
         <TableCell className="w-8">
           <Checkbox checked={done} onCheckedChange={() => togglePairingDone(family.id, index)} aria-label={`Accouplement ${index + 1} fait`} />
         </TableCell>
         <TableCell>
-          <MountCell family={family} code={pairing.pair[0]} />
+          <MountCell family={family} code={pairing.pair[0]} onCopy={follow} active={queued === "male"} />
         </TableCell>
         <TableCell>
-          <MountCell family={family} code={pairing.pair[1]} />
+          <MountCell family={family} code={pairing.pair[1]} onCopy={follow} active={queued === "female"} />
         </TableCell>
         <TableCell className="whitespace-normal font-medium">
           <span className="flex flex-wrap items-center gap-1.5">
@@ -406,6 +379,7 @@ function PairingRow({ family, row, done }: { family: MountFamily; row: PlanRow; 
 }
 
 function PairingTable({ family, rows, done, label }: { family: MountFamily; rows: PlanRow[]; done: Set<number>; label: string }) {
+  const queued = useBirthStore((state) => state.queued);
   return (
     <Table aria-label={label} className="min-w-xl table-fixed">
       <TableHeader>
@@ -421,7 +395,13 @@ function PairingTable({ family, rows, done, label }: { family: MountFamily; rows
       </TableHeader>
       <TableBody>
         {rows.map((row) => (
-          <PairingRow key={row.index} family={family} row={row} done={done.has(row.index)} />
+          <PairingRow
+            key={row.index}
+            family={family}
+            row={row}
+            done={done.has(row.index)}
+            queued={queued && queued.role !== "baby" && queued.pairingIndex === row.index ? queued.role : null}
+          />
         ))}
       </TableBody>
     </Table>
@@ -560,16 +540,28 @@ function PlanResults({ family, plan, doneList }: { family: MountFamily; plan: St
 
 const WATCH_STATUS: Record<WatchStatus, string> = {
   connecting: "Connexion au serveur OCR…",
-  watching: "Dofus est surveillé : lance un accouplement.",
+  watching: "Dofus est surveillé.",
   "no-window": "En attente : mets la fenêtre de Dofus au premier plan.",
   offline: "Serveur OCR indisponible ; lance start-runes-ocr.ps1.",
   outdated: "Serveur OCR obsolète ; arrête-le puis relance start-runes-ocr.ps1.",
   error: "Lecture de l’écran impossible",
 };
 
-/** Pendant les accouplements, le serveur OCR lit la carte « Vous avez obtenu » et copie le nom du petit. */
+const QUEUED_ROLE = { male: "le mâle à chercher", female: "la femelle à chercher", baby: "le nom du petit" } as const;
+
+function QueuedLine({ family, queued }: { family: MountFamily; queued: QueuedName }) {
+  return (
+    <p className="flex flex-wrap items-center gap-x-2 text-sm">
+      <span className="text-muted-foreground">Presse-papiers :</span>
+      <MountCode family={family} code={queued.name} className="-mx-1 bg-primary/10 text-primary" />
+      <span className="text-muted-foreground">{QUEUED_ROLE[queued.role]}</span>
+    </p>
+  );
+}
+
+/** Pendant les accouplements, le serveur OCR met dans le presse-papiers le prochain nom à coller dans Dofus. */
 function BirthWatch({ family }: { family: MountFamily }) {
-  const { watching, status, detail, log } = useBirthStore();
+  const { watching, status, detail, log, queued } = useBirthStore();
   useEffect(() => setBirthWatchFamily(family.id), [family.id]);
   const entries = log.filter((entry) => entry.family === family.id);
   const statusText = status === "error" && detail ? `${WATCH_STATUS.error} : ${detail}` : WATCH_STATUS[status];
@@ -577,14 +569,15 @@ function BirthWatch({ family }: { family: MountFamily }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Nom des petits</CardTitle>
+        <CardTitle>Noms à coller</CardTitle>
         <CardDescription>
-          Pendant tes accouplements, le nom du petit est copié dès que Dofus l’affiche. Colle-le (Ctrl+V) dans le champ du nom.
+          Le presse-papiers suit le plan : le mâle, la femelle, puis le petit dès sa naissance. Chaque Ctrl+V dans Dofus passe au nom suivant ; F8
+          le saute, Maj+F8 revient en arrière.
         </CardDescription>
         <CardAction>
           <Button variant={watching ? "secondary" : "default"} size="sm" onClick={() => setBirthWatch(!watching, family.id)} aria-pressed={watching}>
             <RadarIcon data-icon="inline-start" className={cn(watching && status === "watching" && "animate-pulse")} aria-hidden />
-            {watching ? "Arrêter" : "Copier le nom des petits"}
+            {watching ? "Arrêter" : "Démarrer"}
           </Button>
         </CardAction>
       </CardHeader>
@@ -595,6 +588,7 @@ function BirthWatch({ family }: { family: MountFamily }) {
               {statusText}
             </p>
           ) : null}
+          {watching && queued ? <QueuedLine family={family} queued={queued} /> : null}
           {entries.length ? (
             <ul className="flex flex-col gap-2 text-sm" aria-label="Dernières naissances">
               {entries.map((entry) => (
@@ -615,7 +609,7 @@ function BirthWatch({ family }: { family: MountFamily }) {
                           <span className="text-xs text-success">copié</span>
                         </span>
                       ) : (
-                        <BabyNames family={family} suffix={entry.reading.names.M.slice(1)} />
+                        <BabyNames family={family} suffix={entry.reading.names.M.slice(1)} onCopy={(code) => followCopiedName(family.id, code)} />
                       )}
                     </>
                   ) : null}

@@ -13,7 +13,8 @@ from urllib.request import Request, urlopen
 from PIL import Image
 
 from dofus_ocr import windows_ocr
-from dofus_ocr.births import BirthWatcher, Box, _is_gen, _ocr_image, card_sex, normalize, ocr_lines, read_birth, read_birth_text
+from dofus_ocr import keys
+from dofus_ocr.births import BirthWatcher, Box, KeyPress, event_to_dict, _is_gen, _ocr_image, card_sex, normalize, ocr_lines, read_birth, read_birth_text
 from dofus_ocr.server import make_handler
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -101,7 +102,7 @@ class BirthWatcherTests(unittest.TestCase):
             frame.paste((shade, shade, shade), (0, 0, 600, 600))
             return frame
 
-        watcher = BirthWatcher(grab=grab, ocr=lambda frame: (screens.pop(0), capture))
+        watcher = BirthWatcher(grab=grab, ocr=lambda frame: (screens.pop(0), capture), watch_keys=False)
         for _ in range(4):
             watcher.step()
 
@@ -111,9 +112,58 @@ class BirthWatcherTests(unittest.TestCase):
         self.assertEqual(births[0].sex, "F")
 
     def test_waits_for_the_dofus_window(self) -> None:
-        watcher = BirthWatcher(grab=lambda: None, ocr=lambda frame: ({}, frame))
+        watcher = BirthWatcher(grab=lambda: None, ocr=lambda frame: ({}, frame), watch_keys=False)
         watcher.step()
         self.assertEqual(watcher.status, "no-window")
+
+    def test_reports_key_presses_with_births(self) -> None:
+        watcher = BirthWatcher(grab=lambda: None, ocr=lambda frame: ({}, frame), watch_keys=False)
+        watcher._add(KeyPress("paste", "MAMAMOREBINEB"))
+        watcher._add(KeyPress("next"))
+
+        latest, events, _ = watcher.wait(0, timeout=0)
+        self.assertEqual(latest, 2)
+        self.assertEqual(
+            [event_to_dict(event) for event in events],
+            [{"type": "paste", "text": "MAMAMOREBINEB"}, {"type": "next", "text": None}],
+        )
+
+
+class KeyHookTests(unittest.TestCase):
+    def test_maps_keys_to_queue_actions(self) -> None:
+        self.assertEqual(keys.key_action(keys.VK_V, ctrl=True, shift=False, alt=False), "paste")
+        self.assertIsNone(keys.key_action(keys.VK_V, ctrl=False, shift=False, alt=False))
+        self.assertIsNone(keys.key_action(keys.VK_V, ctrl=True, shift=True, alt=False))
+        self.assertEqual(keys.key_action(keys.VK_F8, ctrl=False, shift=False, alt=False), "next")
+        self.assertEqual(keys.key_action(keys.VK_F8, ctrl=False, shift=True, alt=False), "previous")
+        self.assertIsNone(keys.key_action(keys.VK_F8, ctrl=False, shift=False, alt=True))
+
+    def press(self, vk: int, ctrl: bool, clipboard: str, in_front: bool = True) -> list:
+        actions = []
+        done = threading.Event()
+
+        def record(action, text):
+            actions.append((action, text))
+            done.set()
+
+        hook = keys.KeyHook(record, lambda: in_front)
+        with patch("dofus_ocr.keys.PASTE_SETTLE_SECONDS", 0), patch("dofus_ocr.keys.get_clipboard", return_value=clipboard):
+            hook.press(vk, ctrl=ctrl, shift=False, alt=False)
+            done.wait(0.5)
+        return actions
+
+    def test_reports_a_pasted_mount_name(self) -> None:
+        self.assertEqual(self.press(keys.VK_V, True, "FTUTUORENOREB\r\n"), [("paste", "FTUTUORENOREB")])
+
+    def test_ignores_pastes_of_other_text(self) -> None:
+        self.assertEqual(self.press(keys.VK_V, True, "salut"), [])
+
+    def test_ignores_keys_outside_dofus(self) -> None:
+        self.assertEqual(self.press(keys.VK_V, True, "FTUTUORENOREB", in_front=False), [])
+        self.assertEqual(self.press(keys.VK_F8, False, "", in_front=False), [])
+
+    def test_reports_f8_at_once(self) -> None:
+        self.assertEqual(self.press(keys.VK_F8, False, ""), [("next", None)])
 
 
 class BirthEndpointTests(unittest.TestCase):
@@ -134,7 +184,7 @@ class BirthEndpointTests(unittest.TestCase):
             with urlopen(f"{self.url}/api/births") as response:
                 payload = json.loads(response.read())
 
-        self.assertEqual(payload["births"], [])
+        self.assertEqual(payload["events"], [])
         self.assertRegex(payload["cursor"], r"^[0-9a-f]+:0$")
 
     def post_clipboard(self, body: dict, content_type: str = "application/json"):
