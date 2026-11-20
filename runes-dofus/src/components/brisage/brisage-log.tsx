@@ -110,7 +110,7 @@ export function BrisageLog() {
     <>
       <PageHeader
         title="Suivi des brisages"
-        description="Note chaque objet brisé et les runes obtenues. La valeur des runes suit les prix saisis dans Prix des runes."
+        description="La valeur des runes suit les prix saisis dans Prix des runes."
       />
       <BrisageForm />
 
@@ -120,7 +120,7 @@ export function BrisageLog() {
           value={`${formatQuantity(rows.length)} ${plural(rows.length, "brisage")}`}
           meta={`${formatQuantity(totals.items)} ${plural(totals.items, "objet")} ${plural(totals.items, "brisé")}`}
         />
-        <Metric label="Kamas investis" value={`${formatMoney(totals.cost)} k`} meta="Coût d’achat ou de craft des objets." />
+        <Metric label="Kamas investis" value={`${formatMoney(totals.cost)} k`} />
         <Metric
           label="Valeur des runes"
           value={`${formatMoney(totals.value)} k`}
@@ -133,7 +133,7 @@ export function BrisageLog() {
         <Metric
           label="Bénéfice"
           value={rows.length ? <Gain value={profit} /> : "–"}
-          meta={rows.length && totals.cost ? `Rentabilité ${formatNumber(round2((profit / totals.cost) * 100))} %` : "Bénéfice = valeur des runes − coût des objets."}
+          meta={rows.length && totals.cost ? `Rentabilité ${formatNumber(round2((profit / totals.cost) * 100))} %` : undefined}
         />
       </MetricGrid>
 

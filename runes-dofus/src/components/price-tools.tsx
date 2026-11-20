@@ -91,7 +91,7 @@ export function PriceTools() {
           <AlertDialogHeader>
             <AlertDialogTitle>Effacer tous les prix saisis ?</AlertDialogTitle>
             <AlertDialogDescription>
-              Les prix des runes et des objets enregistrés dans ce navigateur seront supprimés. Le suivi des brisages est conservé.
+              Le suivi des brisages est conservé.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

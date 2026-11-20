@@ -11,7 +11,7 @@ import { calculateRuneAcquisition, getTargetDensityCost, type RuneAcquisition } 
 import { runeFamily, runes, type Rune } from "@/lib/runes";
 import { cn } from "@/lib/utils";
 import { useOcrStore } from "@/stores/ocr";
-import { usePriceReader, usePriceStore } from "@/stores/prices";
+import { usePriceReader } from "@/stores/prices";
 
 const DECISIONS = [
   { value: "all", label: "Toutes" },
@@ -68,7 +68,7 @@ const SORTERS: Record<RuneSort, (a: Row, b: Row) => number> = {
 };
 
 function detailText({ rune, acquisition }: Row) {
-  if (rune.density <= 0) return "Rune sans densité XP exploitable dans cet outil.";
+  if (rune.density <= 0) return "Rune sans densité XP.";
   if (!acquisition.best) return "Renseigne le prix direct ou les prix des tiers inférieurs.";
   if (acquisition.best.kind === "buy") {
     if (acquisition.bestCraft && acquisition.directPrice) {
@@ -87,7 +87,6 @@ function RunesPage() {
   const { q = "", family = "all", decision = "all", sort = "targetCost" } = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
   const readPrice = usePriceReader();
-  const savedAt = usePriceStore((state) => state.savedAt.prices);
   const updatedRuneId = useOcrStore((state) => state.updatedRuneId);
 
   const readRunePrice = (rune: Rune) => readPrice(rune.id);
@@ -114,18 +113,12 @@ function RunesPage() {
     <>
       <PageHeader
         title="Acheter ou crafter des runes"
-        description="Compare les prix HDV et le coût pour 1 000 points de densité."
         aside={
-          <span className="flex flex-col items-end">
-            <span>
-              <strong className="text-foreground">
-                {priced} / {runes.length}
-              </strong>{" "}
-              prix saisis
-            </span>
-            <span role="status">
-              {savedAt ? `Sauvegardé localement à ${savedAt.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}` : "Sauvegarde locale active."}
-            </span>
+          <span>
+            <strong className="text-foreground">
+              {priced} / {runes.length}
+            </strong>{" "}
+            prix saisis
           </span>
         }
       />
@@ -137,19 +130,19 @@ function RunesPage() {
           meta={
             bestXp
               ? `${formatXpRatio(bestXp.acquisition.xpOptimal)} densité / 1 000 kamas via ${bestXp.acquisition.best!.label.toLowerCase()}`
-              : "Renseigne au moins un prix."
+              : undefined
           }
         />
         <Metric
           label="Meilleure revente après craft"
           value={bestCraft ? bestCraft.rune.name : "Aucune opportunité"}
-          meta={bestCraft ? `+${formatMoney(bestCraft.acquisition.profit)} kamas si revendu au prix HDV.` : "Aucun craft positif avec les prix actuels."}
+          meta={bestCraft ? `+${formatMoney(bestCraft.acquisition.profit)} kamas si revendu au prix HDV.` : undefined}
         />
         <Metric
           label="Meilleure économie à l’achat"
           value={bestSaving ? bestSaving.rune.name : "Prix requis"}
           meta={
-            bestSaving ? `${formatMoney(bestSaving.acquisition.saving!)} kamas économisés vs achat direct.` : "Compare achat direct et craft dès que les prix existent."
+            bestSaving ? `${formatMoney(bestSaving.acquisition.saving!)} kamas économisés vs achat direct.` : undefined
           }
         />
       </MetricGrid>

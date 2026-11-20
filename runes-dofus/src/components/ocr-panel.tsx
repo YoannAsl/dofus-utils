@@ -34,11 +34,11 @@ function formatUnitPrice(value: unknown) {
 
 function priceMeta(result: OcrResult) {
   const practicalAverage = getOcrPracticalAverage(result);
-  if (practicalAverage) return `Moyenne pratique: ${formatUnitPrice(practicalAverage)} k/u; x1 bas, gros lots trop chers ecartes.`;
+  if (practicalAverage) return `Moyenne pratique: ${formatUnitPrice(practicalAverage)} k/u; x1 bas, gros lots trop chers écartés.`;
   const weightedAverage = getOcrWeightedAverage(result);
-  if (weightedAverage) return `Moyenne ponderee: ${formatUnitPrice(weightedAverage)} k/u.`;
+  if (weightedAverage) return `Moyenne pondérée: ${formatUnitPrice(weightedAverage)} k/u.`;
   const bestLot = getOcrBestLot(result);
-  if (bestLot) return `Fallback lot x${formatQuantity(bestLot.quantity)} a ${formatUnitPrice(bestLot.unit_price)} k/u.`;
+  if (bestLot) return `Lot ×${formatQuantity(bestLot.quantity)} à ${formatUnitPrice(bestLot.unit_price)} k/u.`;
   return "Aucun lot lisible.";
 }
 
