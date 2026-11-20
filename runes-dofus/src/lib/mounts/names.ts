@@ -7,10 +7,11 @@ const WILD_PARENTS = new Set([WILD, WILD + WILD]);
 
 /** Lit un nom de 13 lettres (sexe + couleur + 1er parent + 2e parent), ou SAUVSAUV pour une capture. */
 export function parseMountName(name: string, family: MountFamily): Mount | null {
-  const code = name.trim().toUpperCase();
-  const match = NAME_PATTERN.exec(code);
+  const match = NAME_PATTERN.exec(name.trim().toUpperCase());
   if (!match) return null;
   const [, sex, type, parents] = match as unknown as [string, Sex, string, string];
+  // Le nom court d'une capture devient le nom de 13 lettres que le jeu et le presse-papiers attendent.
+  const code = `${sex}${type}${parents === WILD ? WILD + WILD : parents}`;
   const colourId = family.idByType.get(type);
   if (!colourId) return null;
   const wild = WILD_PARENTS.has(parents);

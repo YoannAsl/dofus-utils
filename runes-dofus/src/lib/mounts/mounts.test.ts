@@ -11,6 +11,7 @@ describe("mount names", () => {
   it("reads sex, colour and parents from a 13-letter name", () => {
     expect(mount("FPOORPOPOOROR")).toMatchObject({ sex: "F", colourId: "pourpre_orchidee", parentIds: ["pourpre", "orchidee"], wild: false });
     expect(mount("mpopoSAUVSAUV")).toMatchObject({ code: "MPOPOSAUVSAUV", colourId: "pourpre", parentIds: [], wild: true });
+    expect(mount("MPOPOSAUV")).toMatchObject({ code: "MPOPOSAUVSAUV", wild: true });
   });
 
   it("accepts a two-colour code in either order", () => {
