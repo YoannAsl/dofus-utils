@@ -150,7 +150,8 @@ function PairOutcomes({ family }: { family: MountFamily }) {
   const [mother, setMother] = useState("");
   const male = parseMountName(father, family);
   const female = parseMountName(mother, family);
-  const outcomes = male && female ? birthOutcomes(family, male, female) : [];
+  // Un père qui n'est pas un mâle, ou une mère qui n'est pas une femelle : pas d'accouplement possible.
+  const outcomes = male?.sex === "M" && female?.sex === "F" ? birthOutcomes(family, male, female) : [];
 
   return (
     <Card>
