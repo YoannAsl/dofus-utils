@@ -275,14 +275,14 @@ def build_parser() -> argparse.ArgumentParser:
         "--static-dir",
         type=Path,
         default=default_static_dir(),
-        help="Directory containing the built runes web app. Defaults to runes-dofus/dist.",
+        help="Directory containing the built runes web app. Defaults to front/dist.",
     )
     return parser
 
 
 def default_static_dir() -> Path:
     workspace_root = Path(__file__).resolve().parents[3]
-    return workspace_root / "runes-dofus" / "dist"
+    return workspace_root / "front" / "dist"
 
 
 def make_handler(static_dir: Path):
@@ -324,7 +324,7 @@ def main(argv: list[str] | None = None) -> int:
     if not static_dir.exists():
         parser.error(f"static directory does not exist: {static_dir}")
     if not (static_dir / "index.html").exists():
-        parser.error(f"static directory does not contain index.html: {static_dir} (run npm run build in runes-dofus)")
+        parser.error(f"static directory does not contain index.html: {static_dir} (run npm run build in front)")
 
     server = ThreadingHTTPServer((args.host, args.port), make_handler(static_dir))
     url = f"http://{args.host}:{server.server_port}/"

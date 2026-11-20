@@ -156,11 +156,11 @@ async function assertServerReady() {
   try {
     response = await fetch(OCR_HEALTH_PATH, { cache: "no-store" });
   } catch {
-    throw new Error("serveur OCR indisponible; relance start-runes-ocr.ps1");
+    throw new Error("serveur OCR indisponible; relance start.ps1");
   }
-  if (!response.ok) throw new Error("serveur OCR obsolète; arrête l'ancien serveur puis relance start-runes-ocr.ps1");
+  if (!response.ok) throw new Error("serveur OCR obsolète; arrête l'ancien serveur puis relance start.ps1");
   const payload = await readJsonResponse(response);
-  if (!payload?.ok) throw new Error("serveur OCR invalide; relance start-runes-ocr.ps1");
+  if (!payload?.ok) throw new Error("serveur OCR invalide; relance start.ps1");
 }
 
 /** Reads a capture; applies the price directly when the item and price are unambiguous. */

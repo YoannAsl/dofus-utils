@@ -12,16 +12,10 @@ The tab also keeps a log of broken items. Search for the equipment, enter how ma
 
 ## Run with OCR
 
-The app is built with Vite, React, TypeScript, TanStack Router and shadcn/ui, so it needs Node.js 20+ the first time. The launch scripts install dependencies and rebuild the app automatically when its sources changed. From this folder:
+The app is built with Vite, React, TypeScript, TanStack Router and shadcn/ui, so it needs Node.js 20+ the first time. `start.ps1` at the repository root installs dependencies and rebuilds the app automatically when its sources changed, then starts the server:
 
 ```powershell
-.\start-with-ocr.ps1
-```
-
-Or from the workspace root:
-
-```powershell
-.\start-runes-ocr.ps1
+.\start.ps1
 ```
 
 Open the printed `http://127.0.0.1:8765/` URL. Paste, drop, or choose an image in **Importer une capture HDV**. The app saves the detected price automatically when it identifies a single item and reads a usable price. If OCR flags a catalogue price, check the lots before clicking **Appliquer le prix**. If the name is misread, open the item in the catalogue and click **Associer à la capture**.
@@ -68,7 +62,7 @@ npm install
 npm run dev        # Vite dev server; forwards /api to the OCR server on 127.0.0.1:8765
 npm test           # Vitest on the pricing, shattering and import logic
 npm run typecheck
-npm run build      # Builds dist/, which the OCR server serves
+npm run build      # Builds dist/, which the server serves
 ```
 
-Run `..\start-runes-ocr.ps1` alongside `npm run dev` to get OCR and ShareX captures in development. Each tab is a route in `src/routes`, the calculations live in `src/lib`, and saved data lives in the Zustand stores in `src/stores`.
+Run `..\start.ps1` alongside `npm run dev` to get OCR and ShareX captures in development. Each tab is a route in `src/routes`, the calculations live in `src/lib`, and saved data lives in the Zustand stores in `src/stores`.

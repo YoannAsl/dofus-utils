@@ -7,19 +7,19 @@ Windows OCR helper for Dofus auction popups. It reads the item name, extracts vi
 From this folder:
 
 ```powershell
-.\dofus-ocr.ps1 --image "C:\path\to\popup.png"
+.\ocr.ps1 --image "C:\path\to\popup.png"
 ```
 
 To capture the current screen:
 
 ```powershell
-.\dofus-ocr.ps1 --screenshot
+.\ocr.ps1 --screenshot
 ```
 
 If the screenshot is the full game window, crop to the popup:
 
 ```powershell
-.\dofus-ocr.ps1 --screenshot --crop 100,80,440,400
+.\ocr.ps1 --screenshot --crop 100,80,440,400
 ```
 
 The crop format is `x,y,width,height`. Add `--save-capture captures\last.png` to inspect exactly what was OCRed.
@@ -27,24 +27,18 @@ The crop format is `x,y,width,height`. Add `--save-capture captures\last.png` to
 For scripts or automation:
 
 ```powershell
-.\dofus-ocr.ps1 --image "C:\path\to\popup.png" --json
+.\ocr.ps1 --image "C:\path\to\popup.png" --json
 ```
 
-## Runes app integration
+## App integration
 
-From the workspace root:
+`server.py` serves the built front (`../front/dist`) and its `/api`. From the repository root:
 
 ```powershell
-.\start-runes-ocr.ps1
+.\start.ps1
 ```
 
-Open the printed local URL and paste a screenshot into Atelier Dofus. The app saves the detected unit price automatically when it identifies a single item and reads a usable price. To send screenshots directly from ShareX, follow the [ShareX setup](../runes-dofus/README.md#import-sharex-captures-automatically).
-
-If you are already in `runes-dofus`, this starts the same server:
-
-```powershell
-.\start-with-ocr.ps1
-```
+Open the printed local URL and paste a screenshot into Atelier Dofus. The app saves the detected unit price automatically when it identifies a single item and reads a usable price. To send screenshots directly from ShareX, follow the [ShareX setup](../front/README.md#import-sharex-captures-automatically).
 
 ## Output values
 
@@ -60,12 +54,6 @@ If you are already in `runes-dofus`, this starts the same server:
 This uses the Windows built-in OCR API through PowerShell, so there is no Tesseract install. The parser corrects common OCR digit mistakes such as `1 ooo` for `1 000`, then uses row positions and the standard Dofus lot order `1, 10, 100, 1000` to infer a missing quantity when the table is still unambiguous.
 
 ## Tests
-
-```powershell
-.\dofus-ocr.ps1 --image "C:\Users\yoann\AppData\Local\Temp\codex-clipboard-54bb678d-126a-478d-afe8-dea2b5a6aa09.png"
-```
-
-Parser unit tests:
 
 ```powershell
 $env:PYTHONPATH = "src"

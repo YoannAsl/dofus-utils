@@ -31,7 +31,7 @@ def parse_crop(value: str) -> tuple[int, int, int, int]:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="dofus-ocr",
+        prog="ocr.ps1",
         description="Extract item and prices from a Dofus auction popup image.",
     )
     source = parser.add_mutually_exclusive_group(required=True)
