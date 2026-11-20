@@ -1,6 +1,6 @@
 import { ChevronRightIcon, ImageUpIcon, LoaderCircleIcon } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { MountCode } from "@/components/elevage/mount-code";
+import { MountCell, MountCode } from "@/components/elevage/mount-code";
 import { firstImageFile } from "@/components/ocr-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -185,6 +185,57 @@ function SuccessColours({ family, obtained }: { family: MountFamily; obtained: s
   );
 }
 
+/** L'étable lue, par génération puis couleur, pour vérifier la lecture avant de calculer. */
+function StableInventory({ family, codes }: { family: MountFamily; codes: string[] }) {
+  const byGeneration = useMemo(() => {
+    const counts = new Map<string, { M: number; F: number }>();
+    for (const code of codes) {
+      const mount = parseMountName(code, family);
+      if (!mount) continue;
+      const entry = counts.get(mount.colourId) ?? { M: 0, F: 0 };
+      entry[mount.sex] += 1;
+      counts.set(mount.colourId, entry);
+    }
+    const groups = new Map<number, { id: string; name: string; M: number; F: number }[]>();
+    for (const [id, count] of counts) {
+      const generation = family.byId.get(id)?.generation ?? 0;
+      if (!groups.has(generation)) groups.set(generation, []);
+      groups.get(generation)!.push({ id, name: colourLabel(family, id), ...count });
+    }
+    return [...groups.entries()]
+      .sort(([a], [b]) => a - b)
+      .map(([generation, colours]) => ({ generation, colours: colours.sort((a, b) => a.name.localeCompare(b.name, "fr")) }));
+  }, [family, codes]);
+  const colourCount = byGeneration.reduce((total, group) => total + group.colours.length, 0);
+
+  return (
+    <Collapsible>
+      <CollapsibleTrigger className="group flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
+        <ChevronRightIcon className="size-4 transition-transform group-data-[state=open]:rotate-90" aria-hidden />
+        {codes.length} monture{codes.length > 1 ? "s" : ""} lue{codes.length > 1 ? "s" : ""}, {colourCount} couleur{colourCount > 1 ? "s" : ""}
+      </CollapsibleTrigger>
+      <CollapsibleContent className="mt-2 flex flex-col gap-3 rounded-lg border p-3">
+        {byGeneration.map((group) => (
+          <div key={group.generation} className="flex flex-col gap-1">
+            <h4 className="text-xs font-medium text-muted-foreground">G{group.generation}</h4>
+            <ul className="grid gap-x-6 gap-y-0.5 text-sm sm:grid-cols-2 lg:grid-cols-4">
+              {group.colours.map((colour) => (
+                <li key={colour.id} className="flex items-baseline justify-between gap-2">
+                  <span className="truncate">{colour.name}</span>
+                  <span className="shrink-0 tabular-nums text-muted-foreground">
+                    <span className={cn(!colour.M && "opacity-40")}>{colour.M} ♂</span>{" "}
+                    <span className={cn(!colour.F && "opacity-40")}>{colour.F} ♀</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
+
 function StableInput({ family }: { family: MountFamily }) {
   const { families, computing } = useStableStore();
   const state = families[family.id];
@@ -212,12 +263,15 @@ function StableInput({ family }: { family: MountFamily }) {
             placeholder={"FPOORPOPOOROR\nMPOPOSAUVSAUV\n…"}
             rows={8}
             spellCheck={false}
-            className="font-mono uppercase"
+            className="field-sizing-fixed h-48 resize-y font-mono uppercase"
           />
-          <p className="text-sm text-muted-foreground">
-            {reading.codes.length} monture{reading.codes.length > 1 ? "s" : ""} lue{reading.codes.length > 1 ? "s" : ""}
-            {reading.completed.length ? ` · ${reading.completed.length} nom${reading.completed.length > 1 ? "s" : ""} coupé${reading.completed.length > 1 ? "s" : ""} complété${reading.completed.length > 1 ? "s" : ""} (2e parent = couleur de la monture)` : ""}
-          </p>
+          {reading.codes.length ? <StableInventory family={family} codes={reading.codes} /> : null}
+          {reading.completed.length ? (
+            <p className="text-sm text-muted-foreground">
+              {reading.completed.length} nom{reading.completed.length > 1 ? "s" : ""} coupé{reading.completed.length > 1 ? "s" : ""} complété
+              {reading.completed.length > 1 ? "s" : ""} (2e parent = couleur de la monture)
+            </p>
+          ) : null}
           {reading.refused.length ? (
             <p className="text-sm text-warning">
               Non pris en compte, à vérifier en jeu : <span className="font-mono">{reading.refused.join(", ")}</span>
@@ -263,13 +317,30 @@ function StableInput({ family }: { family: MountFamily }) {
   );
 }
 
+/** Les deux noms possibles du petit, mâle et femelle, à copier dès la naissance. */
+function BabyNames({ family, suffix, className }: { family: MountFamily; suffix: string; className?: string }) {
+  return (
+    <span className={cn("flex flex-wrap items-center gap-x-3 gap-y-0.5", className)}>
+      {(["M", "F"] as const).map((sex) => (
+        <span key={sex} className="flex items-center gap-1">
+          <span className="text-muted-foreground" aria-hidden>
+            {sex === "M" ? "♂" : "♀"}
+          </span>
+          <MountCode family={family} code={`${sex}${suffix}`} className="text-xs" />
+        </span>
+      ))}
+    </span>
+  );
+}
+
 function PairingRow({ family, row, done }: { family: MountFamily; row: PlanRow; done: boolean }) {
   const [open, setOpen] = useState(false);
   const { pairing, index } = row;
   const targetId = pairing.target;
   const male = parseMountName(pairing.pair[0], family);
   const female = parseMountName(pairing.pair[1], family);
-  const outcomes = open && male && female ? birthOutcomes(family, male, female) : [];
+  const outcomes = useMemo(() => (male && female ? birthOutcomes(family, male, female) : []), [family, male?.code, female?.code]);
+  const targetOutcome = outcomes.find((outcome) => outcome.colourId === targetId);
   const offTarget = pairing.intended && targetId && pairing.intended !== targetId;
 
   return (
@@ -279,14 +350,15 @@ function PairingRow({ family, row, done }: { family: MountFamily; row: PlanRow; 
           <Checkbox checked={done} onCheckedChange={() => togglePairingDone(family.id, index)} aria-label={`Accouplement ${index + 1} fait`} />
         </TableCell>
         <TableCell>
-          <MountCode family={family} code={pairing.pair[0]} />
+          <MountCell family={family} code={pairing.pair[0]} />
         </TableCell>
         <TableCell>
-          <MountCode family={family} code={pairing.pair[1]} />
+          <MountCell family={family} code={pairing.pair[1]} />
         </TableCell>
-        <TableCell className="whitespace-normal">
+        <TableCell className="whitespace-normal font-medium">
           <span className="flex flex-wrap items-center gap-1.5">
             {targetId ? colourLabel(family, targetId) : "Petit visé inconnu"}
+            {targetOutcome ? <span className="text-xs font-normal tabular-nums text-muted-foreground">{formatChance(targetOutcome.probability)}</span> : null}
             {pairing.potion ? (
               <Badge
                 className="bg-info-muted text-info"
@@ -296,14 +368,16 @@ function PairingRow({ family, row, done }: { family: MountFamily; row: PlanRow; 
               </Badge>
             ) : null}
           </span>
+          {targetOutcome ? <BabyNames family={family} suffix={targetOutcome.nameSuffix} className="mt-0.5 font-normal" /> : null}
           {offTarget ? (
-            <span className="block text-xs text-warning">
+            <span className="block text-xs font-normal text-warning">
               Le plan visait {colourLabel(family, pairing.intended!)}, mais avec ces deux montures le jeu visera {colourLabel(family, targetId)} (à cause de leurs parents).
             </span>
           ) : null}
         </TableCell>
         <TableCell className="w-10 text-right">
-          <Button variant="ghost" size="icon-xs" onClick={() => setOpen(!open)} aria-expanded={open} aria-label="Naissances possibles et noms du petit">
+          <Button variant="ghost" size="icon-xs" onClick={() => setOpen(!open)} aria-expanded={open} aria-label="Autres naissances possibles et leurs noms"
+            title="Autres naissances possibles">
             <ChevronRightIcon className={cn("transition-transform", open && "rotate-90")} />
           </Button>
         </TableCell>
@@ -314,13 +388,12 @@ function PairingRow({ family, row, done }: { family: MountFamily; row: PlanRow; 
           <TableCell colSpan={4} className="whitespace-normal">
             <ul className="flex flex-col gap-1 py-1 text-sm">
               {outcomes.map((outcome) => (
-                <li key={outcome.colourId} className="flex flex-wrap items-center gap-x-2">
+                <li key={outcome.colourId} className={cn("flex flex-wrap items-center gap-x-2", outcome.colourId === targetId && "font-medium")}>
                   <span className="w-12 text-right tabular-nums text-muted-foreground">{formatChance(outcome.probability)}</span>
                   <span className="min-w-40">
                     {colourLabel(family, outcome.colourId)} <span className="text-xs text-muted-foreground">({outcome.labels.join(", ")})</span>
                   </span>
-                  <MountCode family={family} code={`M${outcome.nameSuffix}`} />
-                  <MountCode family={family} code={`F${outcome.nameSuffix}`} />
+                  <BabyNames family={family} suffix={outcome.nameSuffix} />
                 </li>
               ))}
             </ul>
@@ -333,14 +406,14 @@ function PairingRow({ family, row, done }: { family: MountFamily; row: PlanRow; 
 
 function PairingTable({ family, rows, done, label }: { family: MountFamily; rows: PlanRow[]; done: Set<number>; label: string }) {
   return (
-    <Table aria-label={label}>
+    <Table aria-label={label} className="min-w-xl table-fixed">
       <TableHeader>
         <TableRow>
           <TableHead className="w-8">
             <span className="sr-only">Fait</span>
           </TableHead>
-          <TableHead>Mâle</TableHead>
-          <TableHead>Femelle</TableHead>
+          <TableHead className="w-[32%]">Mâle</TableHead>
+          <TableHead className="w-[32%]">Femelle</TableHead>
           <TableHead>Petit visé</TableHead>
           <TableHead className="w-10" />
         </TableRow>
@@ -357,7 +430,10 @@ function PairingTable({ family, rows, done, label }: { family: MountFamily; rows
 function PlanResults({ family, plan, doneList }: { family: MountFamily; plan: StablePlan; doneList: number[] }) {
   const done = new Set(doneList);
   const { groups, finalRows } = useMemo(() => groupPairings(family, plan.pairings), [family, plan]);
-  const pending = plan.pairings.length - plan.pairings.filter((_, index) => done.has(index)).length;
+  const doneCount = plan.pairings.filter((_, index) => done.has(index)).length;
+  const [hideDone, setHideDone] = useState(false);
+  const visible = (rows: PlanRow[]) => (hideDone ? rows.filter((row) => !done.has(row.index)) : rows);
+  const groupDone = (rows: PlanRow[]) => rows.filter((row) => done.has(row.index)).length;
 
   return (
     <>
@@ -365,31 +441,61 @@ function PlanResults({ family, plan, doneList }: { family: MountFamily; plan: St
         <CardHeader>
           <CardTitle>Les reproductions à faire</CardTitle>
           <CardDescription>
-            {plan.read} monture{plan.read > 1 ? "s" : ""} lue{plan.read > 1 ? "s" : ""}
-            {plan.rejected.length ? `, ${plan.rejected.length} ignorée${plan.rejected.length > 1 ? "s" : ""}` : ""} · {plan.pairings.length} accouplement
-            {plan.pairings.length > 1 ? "s" : ""}, {pending} à faire. Après les naissances, recapture l’étable et recalcule.
+            {doneCount} fait{doneCount > 1 ? "s" : ""} sur {plan.pairings.length} accouplement{plan.pairings.length > 1 ? "s" : ""}
+            {plan.rejected.length ? `, ${plan.rejected.length} monture${plan.rejected.length > 1 ? "s" : ""} ignorée${plan.rejected.length > 1 ? "s" : ""}` : ""}. Après
+            les naissances, recapture l’étable et recalcule.
           </CardDescription>
+          {plan.pairings.length ? (
+            <CardAction>
+              <Label className="flex items-center gap-2 font-normal">
+                <Checkbox checked={hideDone} onCheckedChange={(checked) => setHideDone(checked === true)} />
+                Masquer les faits
+              </Label>
+            </CardAction>
+          ) : null}
+          {plan.pairings.length ? (
+            <div className="col-span-full mt-1 h-1 overflow-hidden rounded-full bg-muted" aria-hidden>
+              <div className="h-full rounded-full bg-primary transition-[width]" style={{ width: `${(doneCount / plan.pairings.length) * 100}%` }} />
+            </div>
+          ) : null}
         </CardHeader>
         <CardContent className="flex flex-col gap-6">
           {plan.pairings.length === 0 ? <p className="text-sm text-muted-foreground">Aucune reproduction utile avec cette étable pour l’instant.</p> : null}
-          {groups.map((group) => (
-            <section key={group.generation} className="flex flex-col gap-2">
-              <h3 className="text-sm font-medium">
-                {group.generation ? `Petits en génération ${group.generation}` : "Petit visé inconnu"}
-                <span className="font-normal text-muted-foreground">
-                  {" "}
-                  · {group.targets.map((target) => `${target.count} ${target.name}`).join(", ")}
-                </span>
-              </h3>
-              <PairingTable family={family} rows={group.rows} done={done} label={`Accouplements vers la génération ${group.generation}`} />
-            </section>
-          ))}
+          {groups.map((group) => {
+            const rows = visible(group.rows);
+            const finished = groupDone(group.rows);
+            return (
+              <section key={group.generation} className="flex flex-col gap-2">
+                <h3 className="flex flex-wrap items-baseline gap-x-2 text-sm font-medium">
+                  {group.generation ? `Petits en génération ${group.generation}` : "Petit visé inconnu"}
+                  <span className="tabular-nums font-normal text-muted-foreground">
+                    {finished}/{group.rows.length}
+                  </span>
+                  <span className="basis-full font-normal text-muted-foreground sm:basis-auto">
+                    {group.targets.map((target) => `${target.count} ${target.name}`).join(", ")}
+                  </span>
+                </h3>
+                {rows.length ? (
+                  <PairingTable family={family} rows={rows} done={done} label={`Accouplements vers la génération ${group.generation}`} />
+                ) : (
+                  <p className="text-sm text-muted-foreground">Tous faits.</p>
+                )}
+              </section>
+            );
+          })}
           {finalRows.length ? (
             <section className="flex flex-col gap-2">
-              <h3 className="text-sm font-medium">
+              <h3 className="flex flex-wrap items-baseline gap-x-2 text-sm font-medium">
                 Dernier accouplement, puis brisage des deux parents
+                <span className="tabular-nums font-normal text-muted-foreground">
+                  {groupDone(finalRows)}/{finalRows.length}
+                </span>
               </h3>
-              <PairingTable family={family} rows={finalRows} done={done} label="Derniers accouplements" />
+              {visible(finalRows).length ? (
+                <PairingTable family={family} rows={visible(finalRows)} done={done} label="Derniers accouplements" />
+              ) : (
+                <p className="text-sm text-muted-foreground">Tous faits.</p>
+              )}
             </section>
           ) : null}
           {plan.unmatched > 0 ? (
