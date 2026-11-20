@@ -20,7 +20,6 @@ export interface BrisageEntry {
   runes: BreakEntryRune[];
 }
 
-// Entries come from localStorage or an imported file: keep only well-formed ones.
 export function parseBrisageEntries(values: unknown): BrisageEntry[] {
   if (!Array.isArray(values)) return [];
   return values.flatMap((value) => {
@@ -79,7 +78,6 @@ export interface DraftRune {
   quantity: string;
 }
 
-/** The log form. Kept in the store so the calculator can prefill it. */
 export interface BrisageDraft {
   item: DofusItem | null;
   itemSearch: string;
@@ -87,11 +85,8 @@ export interface BrisageDraft {
   unitCost: string;
   coefficient: string;
   runes: DraftRune[];
-  /** Id of the logged entry being edited; null when the form adds a new entry. */
   editingId: string | null;
-  /** Bumped when the form is filled from elsewhere, so it can scroll into view. */
   revision: number;
-  /** Field to focus after the form is filled from elsewhere. */
   focus: "quantity" | "rune";
 }
 
@@ -147,7 +142,6 @@ export function resetDraft() {
   useBrisageStore.setState((state) => ({ draft: emptyDraft(state.draft.revision) }));
 }
 
-/** Replaces the form with new values and asks it to scroll into view. */
 export function fillDraft(changes: Partial<Omit<BrisageDraft, "revision">>) {
   useBrisageStore.setState((state) => ({ draft: { ...emptyDraft(state.draft.revision + 1), ...changes } }));
 }

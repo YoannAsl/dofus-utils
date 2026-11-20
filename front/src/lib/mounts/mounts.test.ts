@@ -95,7 +95,6 @@ describe("stable planner", () => {
     ]);
     expect(plan.rebalance).toEqual([expect.objectContaining({ nodeId: "orchidee", females: 0, males: 1 })]);
     expect(plan.rebalanceNote).toBe("1 monture sans partenaire possible aujourd'hui ; les G1 conseillées en débloquent 1.");
-    // Une Pourpre née de Pourpre × Orchidée vise moins bien sa couleur : le plan la laisse de côté.
     expect(plan.impures.map((impure) => impure.code)).toEqual(["FPOPOPOPOOROR"]);
   });
 

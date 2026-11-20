@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "typecheck": "tsc -b",
-    "test": "vitest run"
+    "test": "vitest run",
+    "lint:comments": "node ../scripts/comments.mjs check"
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.3.0",

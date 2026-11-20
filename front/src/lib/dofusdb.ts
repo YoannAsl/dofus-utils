@@ -36,7 +36,6 @@ interface Page<T> {
   limit?: number;
 }
 
-/** Equipment types that can be forgemaged or shattered. */
 export const FM_JOB_GROUPS = [
   { id: "all", label: "Tous métiers FM", typeIds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 16, 17, 19, 82] },
   { id: "jeweller", label: "Joaillomage", typeIds: [1, 9] },
@@ -71,7 +70,6 @@ export function itemImage(item: Pick<DofusItem, "img" | "iconId">) {
   return `${DOFUSDB_API_BASE}/img/items/1.png`;
 }
 
-/** Regex matching DofusDB slugs for a typed name, tolerant to œ/æ ligatures and punctuation. */
 export function marketNamePattern(value: string) {
   const parts = normalizeText(value).match(/[a-z0-9œæ]+/g) || [];
   return parts.map((part) => part.replace(/oe|œ/g, "(?:oe|œ)").replace(/ae|æ/g, "(?:ae|æ)")).join("[^a-z0-9œæ]*");
@@ -160,7 +158,6 @@ export async function fetchRecipe(id: number, signal?: AbortSignal) {
   }));
 }
 
-/** All items of one type with their effects, used to find forgemagus candidates. */
 export async function fetchItemsForType(typeId: number, signal?: AbortSignal) {
   const items: DofusItem[] = [];
   let skip = 0;
@@ -182,12 +179,10 @@ export async function fetchItemsForType(typeId: number, signal?: AbortSignal) {
   return items;
 }
 
-/** Catalogue items whose name matches an OCR-read name exactly (breeding fuels are matched locally). */
 export async function findMarketOcrItems(name: string | null | undefined): Promise<DofusItem[]> {
   const pattern = marketNamePattern(name || "");
   if (!pattern) return [];
 
-  // A clipped capture can cut off the last word of a long breeding fuel name.
   const fuelName = new RegExp(`^${pattern}[a-z0-9œæ]*$`);
   const fuels = Object.values(BREEDING_FUELS).flat().filter((fuel) => fuelName.test(normalizeText(fuel.name)));
   if (fuels.length) return fuels;

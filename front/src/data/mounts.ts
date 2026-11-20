@@ -1,8 +1,5 @@
 import type { MountColour, MountFamilyId } from "@/lib/mounts/types";
 
-// Arbres de reproduction des montures. L'ordre des couleurs compte : le planificateur
-// numérote les couleurs dans cet ordre, et un autre ordre peut départager autrement deux plans équivalents.
-
 const c = (id: string, name: string, generation: number, recipes: [string, string][] = []): MountColour => ({ id, name, generation, recipes });
 
 export const MOUNT_FAMILY_LABELS: Record<MountFamilyId, string> = {"dragodinde":"Dragodinde","muldo":"Muldo","volkorne":"Volkorne"};

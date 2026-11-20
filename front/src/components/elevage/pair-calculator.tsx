@@ -13,7 +13,6 @@ import { mountName, parseMountName } from "@/lib/mounts/names";
 import { birthOutcomes } from "@/lib/mounts/offspring";
 import type { Sex } from "@/lib/mounts/types";
 
-/** Couleurs groupées par génération, pour les listes déroulantes. */
 function useColoursByGeneration(family: MountFamily) {
   return useMemo(() => {
     const groups = new Map<number, { id: string; label: string }[]>();
@@ -44,7 +43,6 @@ function ColourSelect({ family, value, onChange, label }: { family: MountFamily;
   );
 }
 
-/** Le nom de 13 lettres à donner en jeu à une monture. */
 function NameBuilder({ family }: { family: MountFamily }) {
   const firstBred = family.colours.find((colour) => colour.generation === 2)!;
   const [sex, setSex] = useState<Sex>("F");
@@ -144,13 +142,11 @@ function ParentInput({ family, label, sex, value, onChange }: { family: MountFam
   );
 }
 
-/** Ce que peut donner un couple, et le nom à donner au petit. */
 function PairOutcomes({ family }: { family: MountFamily }) {
   const [father, setFather] = useState("");
   const [mother, setMother] = useState("");
   const male = parseMountName(father, family);
   const female = parseMountName(mother, family);
-  // Un père qui n'est pas un mâle, ou une mère qui n'est pas une femelle : pas d'accouplement possible.
   const outcomes = male?.sex === "M" && female?.sex === "F" ? birthOutcomes(family, male, female) : [];
 
   return (

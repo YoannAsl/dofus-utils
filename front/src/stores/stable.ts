@@ -10,18 +10,14 @@ import { readStorage, writeStorage } from "@/lib/storage";
 
 const STORAGE_KEY = "dofus-elevage";
 const OCR_TEXT_PATH = "/api/ocr/text";
-/** En dessous de cette largeur, la capture est agrandie : l'OCR lit mieux les petits noms. */
 const UPSCALE_BELOW_WIDTH = 2400;
 
 export interface FamilyStable {
-  /** Noms de l'étable, un par ligne, modifiables. */
   draft: string;
   plan: StablePlan | null;
-  /** Lignes du plan déjà faites, par indice. */
   done: number[];
   mode: ObjectiveMode;
   avoidObtained: boolean;
-  /** Mode succès : couleurs (G2 et plus) déjà nées au moins une fois. */
   obtained: string[];
 }
 
@@ -42,7 +38,6 @@ interface StableState {
 
 const emptyFamily = (): FamilyStable => ({ draft: "", plan: null, done: [], mode: "genetons", avoidObtained: true, obtained: [] });
 
-/** Un plan enregistré par une version qui ne donnait pas le petit visé de chaque accouplement est à recalculer. */
 const isStoredPlan = (plan: unknown): plan is StablePlan =>
   Boolean(plan && typeof plan === "object" && Array.isArray((plan as StablePlan).pairings) && (plan as StablePlan).pairings.every((pairing) => "target" in pairing));
 
@@ -99,7 +94,6 @@ export function togglePairingDone(family: MountFamilyId, index: number) {
   updateFamily(family, { done: [...done] });
 }
 
-/** Coche un accouplement fait, sans le décocher s'il l'était déjà. */
 export function markPairingDone(family: MountFamilyId, index: number) {
   const done = get().families[family].done;
   if (!done.includes(index)) updateFamily(family, { done: [...done, index] });
@@ -110,7 +104,6 @@ export function clearStable(family: MountFamilyId) {
   set({ lastCapture: null, status: "", error: "" });
 }
 
-/** Les noms du brouillon, un par ligne. */
 export function draftNames(draft: string) {
   return draft
     .split(/\r?\n/)
@@ -118,7 +111,6 @@ export function draftNames(draft: string) {
     .filter(Boolean);
 }
 
-/** Lit le brouillon : du JSON collé tel quel, sinon chaque mot compte, pour signaler ceux qui ne sont pas des noms. */
 export function readStableDraft(draft: string, family: MountFamilyId) {
   const text = draft.trim();
   const entries = /^[[{`]/.test(text) ? text : JSON.stringify(text.split(/[\s,;]+/).filter(Boolean));
@@ -155,13 +147,11 @@ async function readCapture(image: Blob, family: MountFamilyId) {
   return readStableCapture(payload.lines ?? [], getMountFamily(family));
 }
 
-/** Lit une capture de l'étable et ajoute ses noms au brouillon : les captures ne se chevauchent pas. */
 export async function readStableImage(family: MountFamilyId, file: Blob) {
   set({ reading: true, error: "", status: "Lecture de la capture…" });
   try {
     const image = await upscaledForOcr(file);
     let reading = await readCapture(image, family);
-    // L'agrandissement aide les petites captures mais coupe parfois un nom : on relit l'originale.
     if (reading.unreadable.length && image !== file) {
       const original = await readCapture(file, family);
       if (original.names.length > reading.names.length) reading = original;
@@ -183,7 +173,6 @@ export async function readStableImage(family: MountFamilyId, file: Blob) {
   }
 }
 
-/** Couleurs à faire naître en mode succès : toutes les G2+ pas encore obtenues. */
 export function missingColours(family: MountFamilyId) {
   const obtained = new Set(get().families[family].obtained);
   return Object.fromEntries(

@@ -89,7 +89,6 @@ class ClipboardEndpointTests(unittest.TestCase):
         set_clipboard.assert_called_once_with("MININSAUVSAUV")
 
     def test_refuses_another_host_name(self) -> None:
-        # A page on another name that resolves to this machine (DNS rebinding) looks same-origin to the browser.
         with patch("dofus_ocr.server.births_module.set_clipboard") as set_clipboard:
             self.assertEqual(self.post(f"evil.example:{self.server.server_port}"), 403)
         set_clipboard.assert_not_called()

@@ -27,7 +27,6 @@ function RootLayout() {
     setOcrMarketNavigator(() => navigate({ to: "/prix" }));
   }, [navigate]);
 
-  // Captures pasted anywhere on the page go to the OCR panel.
   useEffect(() => {
     const onPaste = (event: ClipboardEvent) => {
       const items = Array.from(event.clipboardData?.items ?? []);
@@ -42,7 +41,6 @@ function RootLayout() {
     return () => document.removeEventListener("paste", onPaste);
   }, []);
 
-  // ShareX captures only arrive through the local OCR server.
   useEffect(() => {
     if (!["127.0.0.1", "localhost"].includes(window.location.hostname)) return;
     return startCapturePolling();

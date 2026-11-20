@@ -1,9 +1,3 @@
-"""Notices the keys that move the app's name queue: Ctrl+V, F8 and Shift+F8 pressed while Dofus is in front.
-
-A low-level keyboard hook sees every key, but this one only looks at those three and lets every key
-through to its window untouched. It runs only while the birth watcher does.
-"""
-
 from __future__ import annotations
 
 import ctypes
@@ -13,7 +7,6 @@ import threading
 from typing import Callable
 
 MOUNT_NAME = re.compile(r"^[MF][A-Z]{12}$")
-# Dofus reads the clipboard when it gets the Ctrl+V: the app may replace it only after that.
 PASTE_SETTLE_SECONDS = 0.3
 
 WH_KEYBOARD_LL = 13
@@ -30,7 +23,6 @@ VK_F8 = 0x77
 
 
 def key_action(vk: int, ctrl: bool, shift: bool, alt: bool) -> str | None:
-    """The queue action a key press asks for, if any."""
     if alt:
         return None
     if vk == VK_V and ctrl and not shift:
@@ -41,7 +33,6 @@ def key_action(vk: int, ctrl: bool, shift: bool, alt: bool) -> str | None:
 
 
 def clipboard_sequence() -> int:
-    """Changes each time the clipboard does; reading it does not open the clipboard Dofus is pasting from."""
     if sys.platform != "win32":
         return 0
     return ctypes.windll.user32.GetClipboardSequenceNumber()
@@ -63,7 +54,7 @@ def get_clipboard() -> str | None:
     if not user32.OpenClipboard(None):
         return None
     try:
-        handle = user32.GetClipboardData(13)  # CF_UNICODETEXT
+        handle = user32.GetClipboardData(13)
         if not handle:
             return None
         pointer = kernel32.GlobalLock(handle)
@@ -78,7 +69,6 @@ def get_clipboard() -> str | None:
 
 
 class KeyHook:
-    """Calls `on_action(action, text)` for each queue key pressed in Dofus; `text` is the pasted mount name."""
 
     def __init__(self, on_action: Callable[[str, str | None], None], is_dofus_in_front: Callable[[], bool]) -> None:
         self._on_action = on_action
@@ -99,7 +89,6 @@ class KeyHook:
         self._thread = None
 
     def press(self, vk: int, ctrl: bool, shift: bool, alt: bool) -> None:
-        """Handles a key press away from the hook, which must return quickly or Windows removes it."""
         action = key_action(vk, ctrl, shift, alt)
         if action is None or not self._is_dofus_in_front():
             return
@@ -107,8 +96,6 @@ class KeyHook:
             self._on_action(action, None)
             return
 
-        # What the clipboard holds now is what Dofus pastes. If it changes before the read below,
-        # a birth replaced it: the pasted name is lost, so no paste is reported.
         sequence = clipboard_sequence()
 
         def report_paste() -> None:
@@ -153,17 +140,16 @@ class KeyHook:
             if code == 0:
                 vk = ctypes.cast(data, ctypes.POINTER(KBDLLHOOKSTRUCT)).contents.vkCode
                 if message in (WM_KEYDOWN, WM_SYSKEYDOWN):
-                    # A held key repeats its key-down: only the first one counts.
                     if vk in (VK_V, VK_F8) and vk not in self._held:
                         self._held.add(vk)
                         ctrl, shift, alt = held(VK_CONTROL), held(VK_SHIFT), held(VK_MENU)
-                        if key_action(vk, ctrl, shift, alt):  # A plain « v » typed in the chat costs nothing more.
+                        if key_action(vk, ctrl, shift, alt):
                             threading.Thread(target=self.press, args=(vk, ctrl, shift, alt), daemon=True).start()
                 elif message in (WM_KEYUP, WM_SYSKEYUP):
                     self._held.discard(vk)
             return user32.CallNextHookEx(None, code, message, data)
 
-        procedure = HOOKPROC(callback)  # Kept alive for the hook's whole life.
+        procedure = HOOKPROC(callback)
         hook = user32.SetWindowsHookExW(WH_KEYBOARD_LL, procedure, None, 0)
         if not hook:
             return

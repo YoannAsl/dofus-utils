@@ -6,7 +6,6 @@ import { startThemeSync } from "@/stores/theme";
 import { routeTree } from "./routeTree.gen";
 import "./index.css";
 
-// DofusDB data changes with game updates only: keep it for the whole session.
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: Infinity, retry: 1, refetchOnWindowFocus: false } },
 });

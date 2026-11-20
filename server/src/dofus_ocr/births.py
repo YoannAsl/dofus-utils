@@ -1,10 +1,3 @@
-"""Watches the Dofus window for the mating result card and reads the baby it shows.
-
-The card reads « Vous avez obtenu », then GEN.n and the baby's colour, with the parents' colours
-on either side and the baby's sex as a pink (♀) or blue (♂) icon in the card's top-right corner.
-The colour names stay raw text here: the app matches them against its colour tree.
-"""
-
 from __future__ import annotations
 
 import colorsys
@@ -25,14 +18,10 @@ from PIL import Image, ImageChops, ImageStat
 from .keys import KeyHook
 from .windows_ocr import recognize_image
 
-# Captures are enlarged up to about this width before OCR: Windows OCR misreads the small card text otherwise.
-# A 2000 px window is tripled (≈0.9 s per frame).
 OCR_TARGET_WIDTH = 6000
 MAX_UPSCALE = 3
 WATCH_INTERVAL_SECONDS = 1.0
-# The watcher stops this long after the app last asked for births (page closed or switch turned off).
 IDLE_STOP_SECONDS = 30.0
-# Below this mean pixel difference (0–255) on a thumbnail, the frame is unchanged and OCR is skipped.
 UNCHANGED_FRAME_DIFFERENCE = 1.5
 
 
@@ -73,7 +62,6 @@ class BirthText:
     left_parent: str
     right_parent: str
     anchor: Box
-    # Each parent card's « GEN. » label: its sex icon sits at a fixed offset from it.
     left_gen: Box | None = None
     right_gen: Box | None = None
 
@@ -85,15 +73,12 @@ class Birth:
     left_parent: str
     right_parent: str
     sex: str | None
-    # Which parent card shows ♂: the game puts the male on either side.
     father: str | None = None
-    # The card on screen this reading comes from: a later frame that reads the sex icon keeps it.
     card: str = ""
 
 
 @dataclass(frozen=True)
 class KeyPress:
-    """A queue key pressed in Dofus: « paste » (with the pasted mount name), « next » or « previous »."""
 
     action: str
     text: str | None = None
@@ -120,8 +105,6 @@ def ocr_lines(payload: dict) -> list[Line]:
     return lines
 
 
-# Windows OCR reads the « GEN. » label as « CEN. », « CCN. 1 » or « GENS » (for GEN.6):
-# any three letters and a dot, or something close to « gen ».
 GEN_LABEL = re.compile(r"^(?:[cg][eo]n(?:s\b|(?![a-z]))|[a-z]{3}\s*[.,]\s*\w?$)")
 
 
@@ -134,7 +117,6 @@ def _join(lines: list[Line]) -> str:
 
 
 def read_birth_text(lines: list[Line]) -> BirthText | None:
-    """Finds the result card around « Vous avez obtenu », or None when no card is on screen."""
     anchor = next((line.box for line in lines if "obtenu" in normalize(line.text)), None)
     if anchor is None:
         return None
@@ -161,7 +143,6 @@ def read_birth_text(lines: list[Line]) -> BirthText | None:
     if not child:
         return None
 
-    # Parent labels sit level with the anchor, one card on each side, under their own GEN line.
     def parent(side: Callable[[Box], bool]) -> str:
         return _join(
             [
@@ -170,11 +151,10 @@ def read_birth_text(lines: list[Line]) -> BirthText | None:
                 if side(line.box)
                 and anchor.y0 - 4 * unit <= line.box.center_y <= anchor.y1 + 0.5 * unit
                 and not _is_gen(line.text)
-                and not re.search(r"\d", line.text)  # Colour names have no digits.
+                and not re.search(r"\d", line.text)
             ]
         )
 
-    # The parent cards sit within about one card width of the result; further out is another window.
     reach = 2 * anchor.width
     left_side = lambda box: box.x1 < anchor.x0 and box.center_x > anchor.x0 - reach
     right_side = lambda box: box.x0 > anchor.x1 and box.center_x < anchor.x1 + reach
@@ -189,7 +169,6 @@ def read_birth_text(lines: list[Line]) -> BirthText | None:
 def _pixel_kind(pixel: tuple[int, int, int], min_value: float = 0.36, min_saturation: float = 0.15) -> str | None:
     red, green, blue = (channel / 255 for channel in pixel[:3])
     hue, saturation, value = colorsys.rgb_to_hsv(red, green, blue)
-    # The card is dark navy (value ≈ 0.3): the icon is the only bright, coloured mark in its corner.
     if value < min_value or saturation < min_saturation:
         return None
     hue *= 360
@@ -201,7 +180,6 @@ def _pixel_kind(pixel: tuple[int, int, int], min_value: float = 0.36, min_satura
 
 
 def card_sex(image: Image.Image, anchor: Box) -> str | None:
-    """Reads the sex icon in the card's top-right corner, just below « Vous avez obtenu »."""
     unit = anchor.height or 1.0
     region = (
         int(anchor.x1 - 3 * unit),
@@ -213,7 +191,6 @@ def card_sex(image: Image.Image, anchor: Box) -> str | None:
 
 
 def parent_sex(image: Image.Image, gen: Box, unit: float) -> str | None:
-    """Reads a parent card's sex icon, above and right of its « GEN. » label. The parent cards are dimmed."""
     region = (
         int(gen.center_x + 2.8 * unit),
         int(gen.y0 - 7 * unit),
@@ -255,13 +232,10 @@ def read_birth(payload: dict, image: Image.Image) -> Birth | None:
     return Birth(text.child, text.generation, text.left_parent, text.right_parent, card_sex(image, text.anchor), father)
 
 
-# --- Windows: the Dofus window and the clipboard -------------------------------------------------
-
 _dpi_aware = False
 
 
 def _make_dpi_aware() -> None:
-    """Window rectangles and screen pixels only agree in physical pixels."""
     global _dpi_aware
     if _dpi_aware or sys.platform != "win32":
         return
@@ -277,7 +251,7 @@ def _make_dpi_aware() -> None:
 
 def _process_name(pid: int) -> str:
     kernel32 = ctypes.windll.kernel32
-    handle = kernel32.OpenProcess(0x1000, False, pid)  # PROCESS_QUERY_LIMITED_INFORMATION
+    handle = kernel32.OpenProcess(0x1000, False, pid)
     if not handle:
         return ""
     try:
@@ -291,7 +265,6 @@ def _process_name(pid: int) -> str:
 
 
 def dofus_window() -> tuple[int, int, int, int] | None:
-    """Screen rectangle of the Dofus client area, only while Dofus is the window in front."""
     if sys.platform != "win32":
         return None
     from ctypes import wintypes
@@ -303,7 +276,6 @@ def dofus_window() -> tuple[int, int, int, int] | None:
         return None
     pid = wintypes.DWORD()
     user32.GetWindowThreadProcessId(window, ctypes.byref(pid))
-    # The process, not the title: the app's own page is « Atelier Dofus » in a browser window.
     process = _process_name(pid.value)
     if not process.startswith("dofus") or "launcher" in process:
         return None
@@ -344,7 +316,7 @@ def set_clipboard(text: str) -> None:
     kernel32.GlobalUnlock.argtypes = [wintypes.HGLOBAL]
 
     data = (text + "\0").encode("utf-16-le")
-    for _ in range(10):  # Another program may hold the clipboard for a moment.
+    for _ in range(10):
         if user32.OpenClipboard(None):
             break
         time.sleep(0.05)
@@ -352,17 +324,14 @@ def set_clipboard(text: str) -> None:
         raise RuntimeError("clipboard is busy")
     try:
         user32.EmptyClipboard()
-        handle = kernel32.GlobalAlloc(0x0002, len(data))  # GMEM_MOVEABLE
+        handle = kernel32.GlobalAlloc(0x0002, len(data))
         pointer = kernel32.GlobalLock(handle)
         ctypes.memmove(pointer, data, len(data))
         kernel32.GlobalUnlock(handle)
-        if not user32.SetClipboardData(13, handle):  # CF_UNICODETEXT
+        if not user32.SetClipboardData(13, handle):
             raise RuntimeError("could not write the clipboard")
     finally:
         user32.CloseClipboard()
-
-
-# --- The watcher ---------------------------------------------------------------------------------
 
 
 def _ocr_image(image: Image.Image) -> tuple[dict, Image.Image]:
@@ -381,8 +350,6 @@ def _difference(a: Image.Image, b: Image.Image) -> float:
 
 
 class BirthWatcher:
-    """Looks at the Dofus window once a second while the app is listening, and keeps the births it sees,
-    along with the queue keys pressed in Dofus meanwhile."""
 
     def __init__(
         self,
@@ -409,7 +376,6 @@ class BirthWatcher:
         return self._sequence
 
     def wait(self, after: int, timeout: float) -> tuple[int, list[Birth | KeyPress], str]:
-        """Waits up to `timeout` for births and key presses after `after`; keeps the watcher running meanwhile."""
         deadline = time.monotonic() + timeout
         with self._condition:
             self._demand()
@@ -435,7 +401,7 @@ class BirthWatcher:
                 started = time.monotonic()
                 try:
                     self.step()
-                except Exception as exc:  # A failed frame must not stop the watcher.
+                except Exception as exc:
                     self.status = f"error: {exc}"
                 time.sleep(max(0.0, self._interval - (time.monotonic() - started)))
         finally:
@@ -466,8 +432,6 @@ class BirthWatcher:
         if birth is None:
             self._card = None
             return
-        # A card stays on screen for several frames: count it once, unless it changed in between,
-        # or a frame finally reads the sex icon that the first one missed.
         previous = self._card
         same = previous is not None and _same_card(previous, birth)
         if same and (previous.sex is not None or birth.sex is None):

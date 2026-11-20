@@ -1,7 +1,6 @@
 import { create } from "zustand";
 import { readStorageString, writeStorage } from "@/lib/storage";
 
-// Read by the inline script in index.html too, so the first paint already has the right theme.
 const THEME_STORAGE_KEY = "dofus-theme";
 
 export type ThemePreference = "light" | "dark" | "system";
@@ -33,7 +32,6 @@ export const useThemeStore = create<ThemeState>()((set) => ({
   },
 }));
 
-/** Keeps the `dark` class on <html> in sync with the preference and, in system mode, the OS setting. */
 export function startThemeSync() {
   const apply = () => {
     const { preference } = useThemeStore.getState();

@@ -3,7 +3,6 @@ import { colourLabel, type MountFamily } from "@/lib/mounts/family";
 import { parseMountName } from "@/lib/mounts/names";
 import { cn } from "@/lib/utils";
 
-/** « Femelle · Pourpre-Orchidée · née de Pourpre × Orchidée » */
 export function describeMount(family: MountFamily, code: string) {
   const mount = parseMountName(code, family);
   if (!mount) return null;
@@ -16,7 +15,6 @@ export function describeMount(family: MountFamily, code: string) {
   return `${sex} · ${colourLabel(family, mount.colourId)} · ${origin}`;
 }
 
-/** Le nom à copier, avec dessous sa couleur et ses parents : « Amande · de Orchidée-Ébène × Pourpre-Ébène ». */
 export function MountCell({ family, code, onCopy, active }: { family: MountFamily; code: string; onCopy?: (code: string) => void; active?: boolean }) {
   const mount = parseMountName(code, family);
   return (
@@ -32,7 +30,6 @@ export function MountCell({ family, code, onCopy, active }: { family: MountFamil
   );
 }
 
-/** Nom de monture qui se copie, pour le chercher dans l'étable en jeu. */
 export function MountCode({ family, code, className, onCopy }: { family: MountFamily; code: string; className?: string; onCopy?: (code: string) => void }) {
   const description = describeMount(family, code);
   return (

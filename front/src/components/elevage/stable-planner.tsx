@@ -43,7 +43,6 @@ function CaptureDrop({ family }: { family: MountFamily }) {
     for (const file of Array.from(files ?? [])) if (file.type.startsWith("image/")) await readStableImage(family.id, file);
   };
 
-  // Sur cet onglet, une capture collée (Ctrl+V) va à l'étable, pas à l'OCR des prix.
   useEffect(() => setImagePasteHandler((file) => readStableImage(family.id, file)), [family.id]);
 
   return (
@@ -154,7 +153,6 @@ function SuccessColours({ family, obtained }: { family: MountFamily; obtained: s
   );
 }
 
-/** L'étable lue, par génération puis couleur, pour vérifier la lecture avant de calculer. */
 function StableInventory({ family, codes }: { family: MountFamily; codes: string[] }) {
   const byGeneration = useMemo(() => {
     const counts = new Map<string, { M: number; F: number }>();
@@ -286,7 +284,6 @@ function StableInput({ family }: { family: MountFamily }) {
   );
 }
 
-/** Les deux noms possibles du petit, mâle et femelle, à copier dès la naissance. */
 function BabyNames({ family, suffix, className, onCopy }: { family: MountFamily; suffix: string; className?: string; onCopy?: (code: string) => void }) {
   return (
     <span className={cn("flex flex-wrap items-center gap-x-3 gap-y-0.5", className)}>
@@ -302,7 +299,6 @@ function BabyNames({ family, suffix, className, onCopy }: { family: MountFamily;
   );
 }
 
-/** `queued` : le parent de cette ligne qui est dans le presse-papiers. */
 function PairingRow({ family, row, done, queued }: { family: MountFamily; row: PlanRow; done: boolean; queued: "male" | "female" | null }) {
   const [open, setOpen] = useState(false);
   const { pairing, index } = row;
@@ -559,7 +555,6 @@ function QueuedLine({ family, queued }: { family: MountFamily; queued: QueuedNam
   );
 }
 
-/** Pendant les accouplements, le serveur OCR met dans le presse-papiers le prochain nom à coller dans Dofus. */
 function BirthWatch({ family }: { family: MountFamily }) {
   const { watching, status, detail, log, queued } = useBirthStore();
   useEffect(() => setBirthWatchFamily(family.id), [family.id]);

@@ -19,7 +19,6 @@ from dofus_ocr.births import BirthWatcher, Box, KeyPress, event_to_dict, _is_gen
 from dofus_ocr.server import make_handler
 
 FIXTURES = Path(__file__).parent / "fixtures"
-# The card fixture is cut from a 2× capture at this offset.
 CARD_OFFSET = (2100, 440)
 CAPTURE_SIZE = (3258, 1806)
 
@@ -53,8 +52,6 @@ class ReadBirthTests(unittest.TestCase):
         self.assertEqual(card_sex(Image.open(FIXTURES / "birth_card.png"), anchor), "F")
 
     def test_reads_a_card_from_the_game(self) -> None:
-        # Cut from a 2000 px Dofus window and tripled like the watcher does. The male parent is on the left here,
-        # and OCR misreads the parents' « GEN. » labels as « CCN. 1 » and « GEN. ».
         payload = json.loads((FIXTURES / "game_birth_windows_ocr.json").read_text(encoding="utf-8"))
         card = Image.open(FIXTURES / "game_birth_card.png").convert("RGB")
         card = card.resize((card.width * 3, card.height * 3), Image.LANCZOS)
@@ -92,13 +89,12 @@ class ReadBirthTests(unittest.TestCase):
 
 class BirthWatcherTests(unittest.TestCase):
     def test_counts_each_card_once(self) -> None:
-        # Card shown for two frames, gone, then a new card: two births.
         screens = [birth_payload(), birth_payload(), {"lines": []}, birth_payload()]
         frames = iter(range(len(screens)))
         capture = birth_capture()
 
         def grab():
-            shade = next(frames) * 40  # Each frame differs, so none is skipped as unchanged.
+            shade = next(frames) * 40
             frame = capture.copy()
             frame.paste((shade, shade, shade), (0, 0, 600, 600))
             return frame
@@ -113,7 +109,6 @@ class BirthWatcherTests(unittest.TestCase):
         self.assertEqual(births[0].sex, "F")
 
     def test_a_late_sex_reading_keeps_the_card(self) -> None:
-        # The first frame misses the sex icon, the next one reads it: the same card, read twice.
         unread = birth_payload()
         screens = [unread, birth_payload()]
         frames = iter(range(len(screens)))

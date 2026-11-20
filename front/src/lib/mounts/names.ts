@@ -5,12 +5,10 @@ export const WILD = "SAUV";
 const NAME_PATTERN = /^([MF])([A-Z]{4})(SAUV|[A-Z]{8})$/;
 const WILD_PARENTS = new Set([WILD, WILD + WILD]);
 
-/** Lit un nom de 13 lettres (sexe + couleur + 1er parent + 2e parent), ou SAUVSAUV pour une capture. */
 export function parseMountName(name: string, family: MountFamily): Mount | null {
   const match = NAME_PATTERN.exec(name.trim().toUpperCase());
   if (!match) return null;
   const [, sex, type, parents] = match as unknown as [string, Sex, string, string];
-  // Le nom court d'une capture devient le nom de 13 lettres que le jeu et le presse-papiers attendent.
   const code = `${sex}${type}${parents === WILD ? WILD + WILD : parents}`;
   const colourId = family.idByType.get(type);
   if (!colourId) return null;
@@ -21,7 +19,6 @@ export function parseMountName(name: string, family: MountFamily): Mount | null 
   return { family: family.id, code, sex, colourId, type, parentIds: parentIds as string[], parentTypes, wild };
 }
 
-/** Nom à donner en jeu à une monture. Sans parents, c'est une capture. */
 export function mountName(
   family: MountFamily,
   { colourId, sex, parentIds = [], keepOrder = false }: { colourId: string; sex: Sex; parentIds?: string[]; keepOrder?: boolean },
@@ -36,10 +33,6 @@ export function mountName(
 
 const TRUNCATION = /(…|\.{2,})\s*$/u;
 
-/**
- * Le jeu coupe les noms trop longs avec « … » : c'est alors le 2e parent qui manque.
- * On le remplace par la couleur de la monture elle-même.
- */
 export function completeMountName(raw: string, family: MountFamily): { code: string; completed: boolean } | null {
   const upper = raw.trim().toUpperCase();
   const truncated = TRUNCATION.test(upper);
@@ -61,7 +54,6 @@ export interface MountListReading {
 const CODE_FENCE = /^```[a-z]*\s*|```\s*$/gi;
 const NAME_START = /^[MF][A-Z]{8}/i;
 
-/** Lit une liste de noms : JSON (`["…"]` ou `{ mounts, illisibles }`) ou texte libre. */
 export function readMountList(text: string, family: MountFamily): MountListReading {
   const reading: MountListReading = { codes: [], completed: [], refused: [], unreadable: [] };
   const body = text.replace(CODE_FENCE, "").trim();
@@ -77,7 +69,6 @@ export function readMountList(text: string, family: MountFamily): MountListReadi
       if (Array.isArray(illisibles)) reading.unreadable = illisibles.map(String).filter(Boolean);
     }
   } catch {
-    // Pas du JSON : liste de noms séparés par des espaces, virgules ou retours à la ligne.
   }
   entries ??= body
     .split(/[\s,;"'[\]{}:]+/)

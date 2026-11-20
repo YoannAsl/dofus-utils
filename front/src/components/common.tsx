@@ -7,7 +7,6 @@ import { formatMoney, plural } from "@/lib/format";
 import type { Decision } from "@/lib/pricing";
 import { cn } from "@/lib/utils";
 
-/** DofusDB icon that disappears instead of showing a broken image. */
 export function ItemIcon({ item, src, className }: { item?: Pick<DofusItem, "img" | "iconId">; src?: string; className?: string }) {
   const [failed, setFailed] = useState(false);
   const url = src ?? (item ? itemImage(item) : null);
@@ -24,7 +23,6 @@ export async function copyText(name: string) {
   }
 }
 
-/** An item name that copies itself, to paste in the in-game market search. */
 export function CopyName({ name, className }: { name: string; className?: string }) {
   return (
     <button
@@ -101,7 +99,6 @@ export function PageHeader({ title, description, aside }: { title: string; descr
   );
 }
 
-/** Secondary line under a table cell's main value. */
 export function Meta({ children, className }: { children: ReactNode; className?: string }) {
   return <span className={cn("block text-xs text-muted-foreground", className)}>{children}</span>;
 }

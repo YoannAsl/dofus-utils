@@ -9,8 +9,6 @@ const ocrServer = process.env.OCR_SERVER ?? "http://127.0.0.1:8765";
 export default defineConfig({
   plugins: [tanstackRouter({ target: "react", autoCodeSplitting: true }), react(), tailwindcss()],
   resolve: { alias: { "@": path.resolve(import.meta.dirname, "./src") } },
-  // The Python OCR server owns /api; in dev, forward it so captures and OCR keep working.
-  // changeOrigin sets the Host header the server checks before handing out ShareX captures.
   server: { proxy: { "/api": { target: ocrServer, changeOrigin: true } } },
   test: { environment: "node" },
 });

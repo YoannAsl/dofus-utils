@@ -249,14 +249,12 @@ function BrisageForm() {
   const searchInput = useRef<HTMLDivElement>(null);
   const focusLastRune = useRef(false);
 
-  // When the calculator or an edit fills the form, bring it into view.
   useEffect(() => {
     if (!draft.revision) return;
     form.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     const target = draft.focus === "rune" ? runeList.current?.querySelector("input") : quantityInput.current;
     target?.focus({ preventScroll: true });
     setErrors([]);
-    // Only a new fill moves focus, not later edits of the same draft.
   }, [draft.revision]);
 
   useEffect(() => {
@@ -397,7 +395,6 @@ function BrisageForm() {
                         change({ runes: draft.runes.map((entry) => (entry.key === row.key ? { ...entry, quantity } : entry)) });
                       }}
                       onKeyDown={(event) => {
-                        // Enter on the last quantity adds a row, so a whole drop can be typed from the keyboard.
                         if (event.key === "Enter" && index === draft.runes.length - 1) {
                           event.preventDefault();
                           addRune();

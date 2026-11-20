@@ -7,7 +7,6 @@ export function isMountFamilyId(value: unknown): value is MountFamilyId {
   return typeof value === "string" && value in MOUNT_TREES;
 }
 
-/** Code de 2 lettres de chaque couleur de base, pour les noms de montures. */
 const COLOUR_CODES: Record<string, string> = {
   Amande: "AM",
   Doree: "DO",
@@ -45,19 +44,14 @@ export interface MountFamily {
   label: string;
   colours: MountColour[];
   byId: Map<string, MountColour>;
-  /** Code de 4 lettres de chaque couleur. Les bicolores ont leurs deux codes triés. */
   typeById: Map<string, string>;
-  /** Couleur d'un code de 4 lettres ; les bicolores s'acceptent dans les deux ordres. */
   idByType: Map<string, string>;
-  /** Couleur obtenue par chaque couple, clé `a|b` triée. */
   childByPair: Map<string, string>;
-  /** Code de 2 lettres des couleurs unies (générations impaires), triées par génération. */
   baseCodes: { code: string; name: string; generation: number }[];
 }
 
 export const pairKey = (a: string, b: string) => (a < b ? `${a}|${b}` : `${b}|${a}`);
 
-/** Unie (génération impaire) : son code doublé. Bicolore : les codes de sa 1re recette. */
 function typeCodeOf(byId: Map<string, MountColour>, colour: MountColour, keepOrder: boolean) {
   if (colour.generation % 2 === 1) {
     const code = COLOUR_CODES[colour.name];
@@ -105,7 +99,6 @@ export function getMountFamily(id: MountFamilyId): MountFamily {
   return family;
 }
 
-/** Code de 4 lettres de la couleur ; `keepOrder` garde l'ordre de la recette du jeu pour les bicolores. */
 export function colourType(family: MountFamily, colourId: string, keepOrder = false) {
   const colour = family.byId.get(colourId);
   if (!colour) return null;
@@ -113,7 +106,6 @@ export function colourType(family: MountFamily, colourId: string, keepOrder = fa
   return typeCodeOf(family.byId, colour, true) ?? family.typeById.get(colourId) ?? null;
 }
 
-/** Nom affichable : « Orchidee-Ebene » devient « Orchidée-Ébène ». */
 export function accentColourName(name: string) {
   return name
     .split("-")
