@@ -1,0 +1,447 @@
+{
+ "text": "",
+ "lines": [
+  {
+   "text": "Passer les animations les fois suivantes",
+   "words": [
+    {
+     "text": "Passer",
+     "box": {
+      "x": 1546,
+      "y": 233,
+      "width": 81,
+      "height": 21
+     }
+    },
+    {
+     "text": "les",
+     "box": {
+      "x": 1634,
+      "y": 233,
+      "width": 33,
+      "height": 21
+     }
+    },
+    {
+     "text": "animations",
+     "box": {
+      "x": 1674,
+      "y": 232,
+      "width": 137,
+      "height": 22
+     }
+    },
+    {
+     "text": "les",
+     "box": {
+      "x": 1818,
+      "y": 233,
+      "width": 34,
+      "height": 21
+     }
+    },
+    {
+     "text": "fois",
+     "box": {
+      "x": 1858,
+      "y": 232,
+      "width": 44,
+      "height": 22
+     }
+    },
+    {
+     "text": "suivantes",
+     "box": {
+      "x": 1911,
+      "y": 232,
+      "width": 116,
+      "height": 22
+     }
+    }
+   ]
+  },
+  {
+   "text": "Pourpre et",
+   "words": [
+    {
+     "text": "Pourpre",
+     "box": {
+      "x": 1848,
+      "y": 477,
+      "width": 107,
+      "height": 25
+     }
+    },
+    {
+     "text": "et",
+     "box": {
+      "x": 1965,
+      "y": 479,
+      "width": 25,
+      "height": 18
+     }
+    }
+   ]
+  },
+  {
+   "text": "Orchidee",
+   "words": [
+    {
+     "text": "Orchidee",
+     "box": {
+      "x": 1858,
+      "y": 511,
+      "width": 122,
+      "height": 21
+     }
+    }
+   ]
+  },
+  {
+   "text": "Accouplement",
+   "words": [
+    {
+     "text": "Accouplement",
+     "box": {
+      "x": 2243,
+      "y": 150,
+      "width": 293,
+      "height": 38
+     }
+    }
+   ]
+  },
+  {
+   "text": "Vous avez obtenu",
+   "words": [
+    {
+     "text": "Vous",
+     "box": {
+      "x": 2223,
+      "y": 526,
+      "width": 74,
+      "height": 25
+     }
+    },
+    {
+     "text": "avez",
+     "box": {
+      "x": 2306,
+      "y": 534,
+      "width": 69,
+      "height": 18
+     }
+    },
+    {
+     "text": "obtenu",
+     "box": {
+      "x": 2382,
+      "y": 527,
+      "width": 105,
+      "height": 24
+     }
+    }
+   ]
+  },
+  {
+   "text": "9",
+   "words": [
+    {
+     "text": "9",
+     "box": {
+      "x": 2462,
+      "y": 604,
+      "width": 21,
+      "height": 33
+     }
+    }
+   ]
+  },
+  {
+   "text": "GEN.3",
+   "words": [
+    {
+     "text": "GEN.3",
+     "box": {
+      "x": 2317,
+      "y": 870,
+      "width": 76,
+      "height": 21
+     }
+    }
+   ]
+  },
+  {
+   "text": "Roux",
+   "words": [
+    {
+     "text": "Roux",
+     "box": {
+      "x": 2321,
+      "y": 931,
+      "width": 68,
+      "height": 23
+     }
+    }
+   ]
+  },
+  {
+   "text": "+ 120 XP",
+   "words": [
+    {
+     "text": "+",
+     "box": {
+      "x": 2296,
+      "y": 1041,
+      "width": 19,
+      "height": 18
+     }
+    },
+    {
+     "text": "120",
+     "box": {
+      "x": 2326,
+      "y": 1035,
+      "width": 53,
+      "height": 25
+     }
+    },
+    {
+     "text": "XP",
+     "box": {
+      "x": 2390,
+      "y": 1032,
+      "width": 38,
+      "height": 29
+     }
+    }
+   ]
+  },
+  {
+   "text": "+40",
+   "words": [
+    {
+     "text": "+40",
+     "box": {
+      "x": 2313,
+      "y": 1104,
+      "width": 93,
+      "height": 31
+     }
+    }
+   ]
+  },
+  {
+   "text": "O ACCOUPLEMENT",
+   "words": [
+    {
+     "text": "O",
+     "box": {
+      "x": 2216,
+      "y": 1174,
+      "width": 26,
+      "height": 26
+     }
+    },
+    {
+     "text": "ACCOUPLEMENT",
+     "box": {
+      "x": 2258,
+      "y": 1178,
+      "width": 239,
+      "height": 19
+     }
+    }
+   ]
+  },
+  {
+   "text": "GEN 2",
+   "words": [
+    {
+     "text": "GEN",
+     "box": {
+      "x": 2761,
+      "y": 429,
+      "width": 41,
+      "height": 15
+     }
+    },
+    {
+     "text": "2",
+     "box": {
+      "x": 2813,
+      "y": 429,
+      "width": 9,
+      "height": 15
+     }
+    }
+   ]
+  },
+  {
+   "text": "Pourpre ct",
+   "words": [
+    {
+     "text": "Pourpre",
+     "box": {
+      "x": 2721,
+      "y": 477,
+      "width": 106,
+      "height": 25
+     }
+    },
+    {
+     "text": "ct",
+     "box": {
+      "x": 2838,
+      "y": 480,
+      "width": 25,
+      "height": 17
+     }
+    }
+   ]
+  },
+  {
+   "text": "Ébéne",
+   "words": [
+    {
+     "text": "Ébéne",
+     "box": {
+      "x": 2751,
+      "y": 508,
+      "width": 81,
+      "height": 23
+     }
+    }
+   ]
+  },
+  {
+   "text": "Gain en expérience :",
+   "words": [
+    {
+     "text": "Gain",
+     "box": {
+      "x": 1499,
+      "y": 1723,
+      "width": 61,
+      "height": 23
+     }
+    },
+    {
+     "text": "en",
+     "box": {
+      "x": 1569,
+      "y": 1729,
+      "width": 31,
+      "height": 17
+     }
+    },
+    {
+     "text": "expérience",
+     "box": {
+      "x": 1609,
+      "y": 1723,
+      "width": 146,
+      "height": 29
+     }
+    },
+    {
+     "text": ":",
+     "box": {
+      "x": 1763,
+      "y": 1729,
+      "width": 6,
+      "height": 17
+     }
+    }
+   ]
+  },
+  {
+   "text": "137",
+   "words": [
+    {
+     "text": "137",
+     "box": {
+      "x": 1799,
+      "y": 1725,
+      "width": 44,
+      "height": 21
+     }
+    }
+   ]
+  },
+  {
+   "text": "138",
+   "words": [
+    {
+     "text": "138",
+     "box": {
+      "x": 2975,
+      "y": 1725,
+      "width": 45,
+      "height": 21
+     }
+    }
+   ]
+  },
+  {
+   "text": "x",
+   "words": [
+    {
+     "text": "x",
+     "box": {
+      "x": 3190,
+      "y": 153,
+      "width": 25,
+      "height": 24
+     }
+    }
+   ]
+  },
+  {
+   "text": "O",
+   "words": [
+    {
+     "text": "O",
+     "box": {
+      "x": 3187,
+      "y": 230,
+      "width": 29,
+      "height": 30
+     }
+    }
+   ]
+  },
+  {
+   "text": "+ 120 xp",
+   "words": [
+    {
+     "text": "+",
+     "box": {
+      "x": 3071,
+      "y": 1727,
+      "width": 17,
+      "height": 18
+     }
+    },
+    {
+     "text": "120",
+     "box": {
+      "x": 3101,
+      "y": 1721,
+      "width": 53,
+      "height": 25
+     }
+    },
+    {
+     "text": "xp",
+     "box": {
+      "x": 3165,
+      "y": 1720,
+      "width": 40,
+      "height": 29
+     }
+    }
+   ]
+  }
+ ]
+}

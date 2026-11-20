@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import mimetypes
+import re
 import sys
 from collections import deque
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -12,6 +13,8 @@ from threading import Lock
 from urllib.parse import parse_qs
 from uuid import uuid4
 
+from . import births as births_module
+from .births import BirthWatcher, birth_to_dict
 from .parser import parse_auction_ocr, result_to_dict
 from .windows_ocr import run_windows_ocr
 from . import windows_ocr
@@ -22,6 +25,12 @@ CAPTURES_PATH = "/api/captures"
 OCR_PATH = "/api/ocr"
 # Raw OCR lines, for captures that are not auction popups (the mount stable list).
 OCR_TEXT_PATH = "/api/ocr/text"
+# Births seen in the Dofus window; each request waits for the next one and keeps the watcher running.
+BIRTHS_PATH = "/api/births"
+BIRTHS_WAIT_SECONDS = 20.0
+# The app sends the baby's name here: a background browser tab cannot write the clipboard itself.
+CLIPBOARD_PATH = "/api/clipboard"
+MOUNT_NAME = re.compile(r"^[MF][A-Z]{12}$")
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 
 
@@ -40,12 +49,13 @@ class RunesOcrHandler(SimpleHTTPRequestHandler):
     captures: deque[tuple[int, bytes]]
     captures_lock: Lock
     capture_session: str
+    birth_watcher: BirthWatcher
 
     def log_message(self, format: str, *args) -> None:
         return
 
     def end_headers(self) -> None:
-        if self.path.split("?", 1)[0] == CAPTURES_PATH:
+        if self.path.split("?", 1)[0] in (CAPTURES_PATH, BIRTHS_PATH):
             self.send_header("Cache-Control", "no-store")
             self.send_header("X-Content-Type-Options", "nosniff")
         super().end_headers()
@@ -55,6 +65,10 @@ class RunesOcrHandler(SimpleHTTPRequestHandler):
         if path == CAPTURES_PATH:
             if self._allow_capture_request():
                 self._send_next_capture(query)
+            return
+        if path == BIRTHS_PATH:
+            if self._allow_capture_request():
+                self._send_births(query)
             return
         if path == "/api/health":
             self._send_json(build_health_payload())
@@ -68,6 +82,10 @@ class RunesOcrHandler(SimpleHTTPRequestHandler):
     def do_POST(self) -> None:
         path = self.path.split("?", 1)[0]
         if path == CAPTURES_PATH and not self._allow_capture_request():
+            return
+        if path == CLIPBOARD_PATH:
+            if self._allow_app_request():
+                self._write_clipboard()
             return
         if path not in (OCR_PATH, OCR_TEXT_PATH, CAPTURES_PATH):
             self.send_error(404, "Not found")
@@ -98,6 +116,53 @@ class RunesOcrHandler(SimpleHTTPRequestHandler):
             return True
         self.send_error(403, "Capture import is local only")
         return False
+
+    def _allow_app_request(self) -> bool:
+        """A request from the app's own page: browsers set Sec-Fetch-Site, other sites get cross-site."""
+        if (
+            self.client_address[0] == "127.0.0.1"
+            and self.headers.get("Sec-Fetch-Site") in (None, "same-origin")
+            and self.headers.get("Content-Type", "").split(";", 1)[0].strip() == "application/json"
+        ):
+            return True
+        self.send_error(403, "Local app only")
+        return False
+
+    def _write_clipboard(self) -> None:
+        try:
+            length = int(self.headers.get("Content-Length") or 0)
+            payload = json.loads(self.rfile.read(min(length, 1024)) or b"{}")
+        except (ValueError, json.JSONDecodeError):
+            self._send_json({"error": "invalid JSON body"}, status=400)
+            return
+        text = payload.get("text") if isinstance(payload, dict) else None
+        if not isinstance(text, str) or not MOUNT_NAME.match(text):
+            self._send_json({"error": "only a 13-letter mount name can be copied"}, status=400)
+            return
+        try:
+            births_module.set_clipboard(text)
+        except Exception as exc:
+            self._send_json({"error": str(exc)}, status=500)
+            return
+        self.send_response(204)
+        self.end_headers()
+
+    def _send_births(self, query: str) -> None:
+        cursor = parse_qs(query).get("after", [""])[0]
+        session, _, sequence = cursor.partition(":")
+        watcher = self.birth_watcher
+        # A new listener starts from now: it must not copy a birth it never saw happen.
+        after = watcher.sequence
+        if session == self.capture_session and len(sequence) <= 16 and sequence.isdecimal():
+            after = int(sequence)
+        latest, births, status = watcher.wait(after, BIRTHS_WAIT_SECONDS)
+        self._send_json(
+            {
+                "cursor": f"{self.capture_session}:{latest}",
+                "births": [birth_to_dict(birth) for birth in births],
+                "status": status,
+            }
+        )
 
     def _receive_capture(self) -> None:
         if self.headers.get("Content-Type") != "image/png":
@@ -221,6 +286,7 @@ def make_handler(static_dir: Path):
         captures = deque(maxlen=10)
         captures_lock = Lock()
         capture_session = uuid4().hex
+        birth_watcher = BirthWatcher()
 
         def __init__(self, *args, **kwargs):
             super().__init__(*args, directory=str(static_dir), **kwargs)
@@ -241,6 +307,7 @@ def build_health_payload() -> dict:
         "server_version": RunesOcrHandler.server_version,
         "server_file": str(Path(__file__).resolve()),
         "windows_ocr_file": str(Path(windows_ocr.__file__).resolve()),
+        "births": True,
     }
 
 
