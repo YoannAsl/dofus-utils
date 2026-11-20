@@ -5,6 +5,14 @@ description = "OCR helper for Dofus auction popups."
 requires-python = ">=3.10"
 dependencies = [
   "Pillow>=10",
+  # Births OCR runs in-process with these; without them it falls back to PowerShell.
+  "winrt-runtime>=3; sys_platform == 'win32'",
+  "winrt-Windows.Foundation>=3; sys_platform == 'win32'",
+  "winrt-Windows.Foundation.Collections>=3; sys_platform == 'win32'",
+  "winrt-Windows.Globalization>=3; sys_platform == 'win32'",
+  "winrt-Windows.Graphics.Imaging>=3; sys_platform == 'win32'",
+  "winrt-Windows.Media.Ocr>=3; sys_platform == 'win32'",
+  "winrt-Windows.Storage.Streams>=3; sys_platform == 'win32'",
 ]
 
 [tool.pytest.ini_options]

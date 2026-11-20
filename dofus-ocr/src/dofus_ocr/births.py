@@ -16,13 +16,12 @@ import unicodedata
 from collections import deque
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from tempfile import TemporaryDirectory
 from threading import Condition, Thread
 from typing import Callable
 
 from PIL import Image, ImageChops, ImageStat
 
-from .windows_ocr import run_windows_ocr
+from .windows_ocr import recognize_image
 
 # Captures are enlarged up to about this width before OCR: Windows OCR misreads the small card text otherwise.
 # A 2000 px window is tripled (≈0.9 s per frame).
@@ -360,10 +359,7 @@ def _ocr_image(image: Image.Image) -> tuple[dict, Image.Image]:
     factor = min(MAX_UPSCALE, round(OCR_TARGET_WIDTH / max(1, image.width)))
     if factor > 1:
         image = image.resize((image.width * factor, image.height * factor), Image.LANCZOS)
-    with TemporaryDirectory() as tmp:
-        path = Path(tmp) / "dofus-birth.png"
-        image.save(path)
-        return run_windows_ocr(path), image
+    return recognize_image(image), image
 
 
 def _thumbnail(image: Image.Image) -> Image.Image:

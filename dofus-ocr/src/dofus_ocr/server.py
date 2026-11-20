@@ -325,6 +325,8 @@ def main(argv: list[str] | None = None) -> int:
     url = f"http://{args.host}:{server.server_port}/"
     safe_print(f"Serving Atelier Runes with OCR at {url}")
     safe_print(f"OCR module: {Path(windows_ocr.__file__).resolve()}")
+    if not windows_ocr.in_process_available():
+        safe_print("Births OCR goes through PowerShell: pip install the winrt packages from pyproject.toml to make it faster.")
     safe_print("Press Ctrl+C to stop.")
 
     try:

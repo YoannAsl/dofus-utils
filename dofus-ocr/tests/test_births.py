@@ -12,7 +12,8 @@ from urllib.request import Request, urlopen
 
 from PIL import Image
 
-from dofus_ocr.births import BirthWatcher, Box, _is_gen, card_sex, normalize, ocr_lines, read_birth, read_birth_text
+from dofus_ocr import windows_ocr
+from dofus_ocr.births import BirthWatcher, Box, _is_gen, _ocr_image, card_sex, normalize, ocr_lines, read_birth, read_birth_text
 from dofus_ocr.server import make_handler
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -64,6 +65,18 @@ class ReadBirthTests(unittest.TestCase):
         self.assertEqual(normalize(birth.right_parent), "emeraude")
         self.assertEqual(birth.sex, "M")
         self.assertEqual(birth.father, "left")
+
+    @unittest.skipUnless(windows_ocr.in_process_available(), "winrt packages not installed")
+    def test_reads_a_card_from_the_game_with_in_process_ocr(self) -> None:
+        card = Image.open(FIXTURES / "game_birth_card.png").convert("RGB")
+        frame = Image.new("RGB", (2000, 1100), (20, 24, 50))
+        frame.paste(card, (750, 330))
+
+        birth = read_birth(*_ocr_image(frame))
+
+        self.assertEqual(normalize(birth.child), "emeraude et pourpre")
+        self.assertEqual(birth.generation, 6)
+        self.assertEqual((birth.sex, birth.father), ("M", "left"))
 
     def test_recognises_misread_gen_labels(self) -> None:
         for text in ["GEN.6", "GENS", "CEN. 1", "CCN. 1", "GEN.", "Gen 3"]:
