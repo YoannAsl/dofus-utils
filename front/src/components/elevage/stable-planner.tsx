@@ -542,8 +542,8 @@ const WATCH_STATUS: Record<WatchStatus, string> = {
   connecting: "Connexion au serveur OCR…",
   watching: "Dofus est surveillé.",
   "no-window": "En attente : mets la fenêtre de Dofus au premier plan.",
-  offline: "Serveur OCR indisponible ; lance start-runes-ocr.ps1.",
-  outdated: "Serveur OCR obsolète ; arrête-le puis relance start-runes-ocr.ps1.",
+  offline: "Serveur OCR indisponible ; lance start.ps1.",
+  outdated: "Serveur OCR obsolète ; arrête-le puis relance start.ps1.",
   error: "Lecture de l’écran impossible",
 };
 

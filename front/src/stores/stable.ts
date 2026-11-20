@@ -147,9 +147,9 @@ async function readCapture(image: Blob, family: MountFamilyId) {
   try {
     response = await fetch(OCR_TEXT_PATH, { method: "POST", headers: { "Content-Type": image.type || "image/png" }, body: image });
   } catch {
-    throw new Error("serveur OCR indisponible ; relance start-runes-ocr.ps1");
+    throw new Error("serveur OCR indisponible ; relance start.ps1");
   }
-  if (response.status === 404) throw new Error("serveur OCR obsolète ; arrête-le puis relance start-runes-ocr.ps1");
+  if (response.status === 404) throw new Error("serveur OCR obsolète ; arrête-le puis relance start.ps1");
   const payload = (await response.json().catch(() => null)) as { lines?: OcrLine[]; error?: string } | null;
   if (!response.ok || !payload) throw new Error(payload?.error || `erreur HTTP ${response.status}`);
   return readStableCapture(payload.lines ?? [], getMountFamily(family));
