@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getMountFamily } from "@/lib/mounts/family";
-import { appendCapture, readStableCapture, repairMountName } from "@/lib/mounts/stable-ocr";
+import { readStableCapture, repairMountName } from "@/lib/mounts/stable-ocr";
 
 const volkorne = getMountFamily("volkorne");
 const line = (text: string, y: number) => ({ text, words: text.split(" ").map((word, index) => ({ text: word, box: { x: 10 + index * 100, y, width: 80, height: 12 } })) });
@@ -33,11 +33,18 @@ describe("stable OCR", () => {
     );
     expect(reading.names).toEqual(["FPOORPOPOOROR", "MININSAUVSAUV", "FTUIVTUTUIVIV"]);
     expect(reading.corrected).toEqual([{ from: "FTI-JIVTUTUIVIV", to: "FTUIVTUTUIVIV" }]);
+    expect(reading.unreadable).toEqual([]);
   });
 
-  it("counts the rows seen on both sides of a scroll only once", () => {
-    expect(appendCapture(["A", "B", "C"], ["B", "C", "D"])).toEqual({ names: ["A", "B", "C", "D"], overlap: 2 });
-    expect(appendCapture(["A", "A"], ["A", "B"])).toEqual({ names: ["A", "A", "B"], overlap: 1 });
-    expect(appendCapture([], ["A"])).toEqual({ names: ["A"], overlap: 0 });
+  it("joins a name cut into several words", () => {
+    // Lu par Windows OCR sur une capture agrandie.
+    expect(readStableCapture([line("MPOIN PO POI NIN", 20), line("GEN. 2", 20)], volkorne).names).toEqual(["MPOINPOPOININ"]);
+  });
+
+  it("flags a row whose name was not read", () => {
+    // Windows OCR n'a lu que la fin du nom, « POPO », à côté de la génération.
+    const reading = readStableCapture([line("FAMINININAMAM", 20), line("GEN. 4", 20), line("POPO", 50), line("GEN. 2", 50), line("1", 70)], volkorne);
+    expect(reading.names).toEqual(["FAMINININAMAM"]);
+    expect(reading.unreadable).toEqual(["POPO"]);
   });
 });

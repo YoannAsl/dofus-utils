@@ -66,7 +66,7 @@ function CaptureDrop({ family }: { family: MountFamily }) {
       >
         {reading ? <LoaderCircleIcon className="size-5 animate-spin" aria-hidden /> : <ImageUpIcon className="size-5" aria-hidden />}
         <span className="flex-1">
-          Colle (Ctrl+V) ou dépose des captures de l’étable, filtre <strong className="font-medium text-foreground">Fécondes</strong>.
+          Colle (Ctrl+V) ou dépose des captures de l’étable, filtre <strong className="font-medium text-foreground">Fécondes</strong>, sans qu’une ligne apparaisse sur deux captures.
         </span>
         <Button variant="outline" size="sm" onClick={() => fileInput.current?.click()} disabled={reading}>
           Choisir des captures

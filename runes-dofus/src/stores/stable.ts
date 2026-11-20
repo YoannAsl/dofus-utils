@@ -4,7 +4,7 @@ import type { ObjectiveMode } from "@/lib/mounts/horizon";
 import { readMountList } from "@/lib/mounts/names";
 import type { StablePlan } from "@/lib/mounts/planner";
 import { PlannerCancelled, runPlanner } from "@/lib/mounts/planner-client";
-import { appendCapture, type OcrLine, readStableCapture } from "@/lib/mounts/stable-ocr";
+import { type OcrLine, readStableCapture } from "@/lib/mounts/stable-ocr";
 import type { MountFamilyId } from "@/lib/mounts/types";
 import { readStorage, writeStorage } from "@/lib/storage";
 
@@ -27,7 +27,6 @@ export interface FamilyStable {
 
 export interface CaptureReport {
   added: number;
-  overlap: number;
   corrected: { from: string; to: string }[];
   unreadable: string[];
 }
@@ -143,30 +142,38 @@ async function upscaledForOcr(file: Blob): Promise<Blob> {
   }
 }
 
-/** Lit une capture de l'étable et ajoute ses noms au brouillon, sans recompter le raccord avec la précédente. */
+async function readCapture(image: Blob, family: MountFamilyId) {
+  let response: Response;
+  try {
+    response = await fetch(OCR_TEXT_PATH, { method: "POST", headers: { "Content-Type": image.type || "image/png" }, body: image });
+  } catch {
+    throw new Error("serveur OCR indisponible ; relance start-runes-ocr.ps1");
+  }
+  if (response.status === 404) throw new Error("serveur OCR obsolète ; arrête-le puis relance start-runes-ocr.ps1");
+  const payload = (await response.json().catch(() => null)) as { lines?: OcrLine[]; error?: string } | null;
+  if (!response.ok || !payload) throw new Error(payload?.error || `erreur HTTP ${response.status}`);
+  return readStableCapture(payload.lines ?? [], getMountFamily(family));
+}
+
+/** Lit une capture de l'étable et ajoute ses noms au brouillon : les captures ne se chevauchent pas. */
 export async function readStableImage(family: MountFamilyId, file: Blob) {
   set({ reading: true, error: "", status: "Lecture de la capture…" });
   try {
     const image = await upscaledForOcr(file);
-    let response: Response;
-    try {
-      response = await fetch(OCR_TEXT_PATH, { method: "POST", headers: { "Content-Type": image.type || "image/png" }, body: image });
-    } catch {
-      throw new Error("serveur OCR indisponible ; relance start-runes-ocr.ps1");
+    let reading = await readCapture(image, family);
+    // L'agrandissement aide les petites captures mais coupe parfois un nom : on relit l'originale.
+    if (reading.unreadable.length && image !== file) {
+      const original = await readCapture(file, family);
+      if (original.names.length > reading.names.length) reading = original;
     }
-    if (response.status === 404) throw new Error("serveur OCR obsolète ; arrête-le puis relance start-runes-ocr.ps1");
-    const payload = (await response.json().catch(() => null)) as { lines?: OcrLine[]; error?: string } | null;
-    if (!response.ok || !payload) throw new Error(payload?.error || `erreur HTTP ${response.status}`);
-
-    const reading = readStableCapture(payload.lines ?? [], getMountFamily(family));
     const existing = draftNames(get().families[family].draft);
-    const { names, overlap } = appendCapture(existing, reading.names);
+    const names = [...existing, ...reading.names];
     updateFamily(family, { draft: names.join("\n") });
     const added = names.length - existing.length;
     set({
-      lastCapture: { added, overlap, corrected: reading.corrected, unreadable: reading.unreadable },
+      lastCapture: { added, corrected: reading.corrected, unreadable: reading.unreadable },
       status: reading.names.length
-        ? `${added} monture${added > 1 ? "s" : ""} ajoutée${added > 1 ? "s" : ""}${overlap ? `, ${overlap} déjà vue${overlap > 1 ? "s" : ""} au raccord` : ""}.`
+        ? `${added} monture${added > 1 ? "s" : ""} ajoutée${added > 1 ? "s" : ""}.`
         : "Aucun nom de monture lu sur cette capture.",
     });
   } catch (error) {

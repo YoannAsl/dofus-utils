@@ -140,7 +140,26 @@ export interface StableCaptureReading {
   unreadable: string[];
 }
 
-const looksLikeName = (word: string) => /^[MF]/i.test(word.trim()) && normalizeToken(word).letters.length >= 7;
+const isGeneration = (word: string) => /^GEN\b/i.test(word.trim());
+const isNamePiece = (word: string) => /^[A-Z0-9|.…-]+$/i.test(word.trim());
+const middle = (word: OcrWord) => (word.box ? word.box.y + word.box.height / 2 : null);
+
+/**
+ * Le nom écrit au début d'une ligne, recollé quand l'OCR l'a coupé en plusieurs mots
+ * (« MPOIN PO POI NIN »). Du plus long au plus court : un morceau seul se « répare » parfois
+ * en un autre nom.
+ */
+function nameCandidates(words: string[]) {
+  const start = words.findIndex((word) => /^[MF]/i.test(word.trim()));
+  if (start < 0) return [];
+  const pieces = [words[start]!];
+  for (const word of words.slice(start + 1)) {
+    if (normalizeToken(pieces.join("")).letters.length >= 13 || !isNamePiece(word)) break;
+    pieces.push(word);
+  }
+  const candidates = pieces.map((_, index) => pieces.slice(0, index + 1).join("")).reverse();
+  return normalizeToken(candidates[0]!).letters.length >= 7 ? candidates : [];
+}
 
 /** Noms de montures d'une capture de l'étable, de haut en bas. */
 export function readStableCapture(lines: OcrLine[], family: MountFamily): StableCaptureReading {
@@ -150,38 +169,37 @@ export function readStableCapture(lines: OcrLine[], family: MountFamily): Stable
     .map((line, index) => ({ line, index }))
     .sort((a, b) => top(a.line) - top(b.line) || left(a.line) - left(b.line) || a.index - b.index);
   const reading: StableCaptureReading = { names: [], corrected: [], unreadable: [] };
+  // Chaque ligne de l'étable a une génération : celles dont aucun nom n'a été lu sont signalées.
+  const generations: OcrWord[] = [];
+  const rowsWithName: number[] = [];
+  const otherText: OcrWord[] = [];
   for (const { line } of ordered) {
-    const words = line.words.length ? line.words.map((word) => word.text) : line.text.split(/\s+/);
-    const start = words.findIndex(looksLikeName);
-    if (start < 0) continue;
-    const first = words[start]!;
-    const candidates = [first];
-    // L'OCR coupe parfois un nom en deux mots.
-    const next = words[start + 1];
-    if (next && normalizeToken(first).letters.length < 13 && /^[A-Z0-9|.…]+$/i.test(next)) candidates.push(first + next);
+    const words: OcrWord[] = line.words.length ? line.words : line.text.split(/\s+/).map((text) => ({ text }));
+    const generation = words.findIndex((word) => isGeneration(word.text));
+    if (generation >= 0) generations.push(words[generation]!);
+    const beforeGeneration = generation >= 0 ? words.slice(0, generation) : words;
+    const candidates = nameCandidates(beforeGeneration.map((word) => word.text));
+    if (!candidates.length) {
+      otherText.push(...beforeGeneration);
+      continue;
+    }
+    const row = middle(words[0]!);
+    if (row !== null) rowsWithName.push(row);
     const repaired = candidates.map((candidate) => repairMountName(candidate, family)).find((result) => result !== null);
     if (!repaired) {
-      reading.unreadable.push(first);
+      reading.unreadable.push(candidates[0]!);
       continue;
     }
     reading.names.push(repaired.code);
     if (repaired.from && repaired.from !== repaired.code) reading.corrected.push({ from: repaired.from, to: repaired.code });
   }
-  return reading;
-}
-
-/**
- * Ajoute les noms d'une nouvelle capture. Les captures se chevauchent quand on fait défiler la
- * liste : les lignes vues des deux côtés du raccord ne comptent qu'une fois.
- */
-export function appendCapture(existing: string[], incoming: string[]) {
-  let overlap = 0;
-  for (let size = Math.min(existing.length, incoming.length); size > 0; size -= 1) {
-    const tail = existing.slice(existing.length - size);
-    if (tail.every((name, index) => name === incoming[index])) {
-      overlap = size;
-      break;
-    }
+  for (const generation of generations) {
+    const row = middle(generation);
+    if (row === null) continue;
+    const sameRow = (y: number | null) => y !== null && Math.abs(y - row) < generation.box!.height * 1.5;
+    if (rowsWithName.some(sameRow)) continue;
+    const seen = otherText.filter((word) => sameRow(middle(word)) && word.box!.x <= generation.box!.x && /[A-Z]{2}/i.test(word.text));
+    reading.unreadable.push(seen.length ? seen.map((word) => word.text).join(" ") : "(nom illisible)");
   }
-  return { names: [...existing, ...incoming.slice(overlap)], overlap };
+  return reading;
 }
