@@ -1,4 +1,4 @@
-import { ChevronRightIcon, ImageUpIcon, LoaderCircleIcon } from "lucide-react";
+import { ChevronRightIcon, ImageUpIcon, LoaderCircleIcon, RadarIcon } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { MountCell, MountCode } from "@/components/elevage/mount-code";
 import { firstImageFile } from "@/components/ocr-panel";
@@ -18,6 +18,7 @@ import { parseMountName } from "@/lib/mounts/names";
 import { birthOutcomes } from "@/lib/mounts/offspring";
 import type { Pairing, StablePlan } from "@/lib/mounts/planner";
 import { cn } from "@/lib/utils";
+import { setBirthWatch, setBirthWatchFamily, useBirthStore, type WatchStatus } from "@/stores/births";
 import { setImagePasteHandler } from "@/stores/ocr";
 import {
   clearStable,
@@ -557,11 +558,84 @@ function PlanResults({ family, plan, doneList }: { family: MountFamily; plan: St
   );
 }
 
+const WATCH_STATUS: Record<WatchStatus, string> = {
+  connecting: "Connexion au serveur OCR…",
+  watching: "Dofus est surveillé : lance un accouplement.",
+  "no-window": "En attente : mets la fenêtre de Dofus au premier plan.",
+  offline: "Serveur OCR indisponible ; lance start-runes-ocr.ps1.",
+  outdated: "Serveur OCR obsolète ; arrête-le puis relance start-runes-ocr.ps1.",
+  error: "Lecture de l’écran impossible",
+};
+
+/** Pendant les accouplements, le serveur OCR lit la carte « Vous avez obtenu » et copie le nom du petit. */
+function BirthWatch({ family }: { family: MountFamily }) {
+  const { watching, status, detail, log } = useBirthStore();
+  useEffect(() => setBirthWatchFamily(family.id), [family.id]);
+  const entries = log.filter((entry) => entry.family === family.id);
+  const statusText = status === "error" && detail ? `${WATCH_STATUS.error} : ${detail}` : WATCH_STATUS[status];
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Nom des petits</CardTitle>
+        <CardDescription>
+          Pendant tes accouplements, le nom du petit est copié dès que Dofus l’affiche. Colle-le (Ctrl+V) dans le champ du nom.
+        </CardDescription>
+        <CardAction>
+          <Button variant={watching ? "secondary" : "default"} size="sm" onClick={() => setBirthWatch(!watching, family.id)} aria-pressed={watching}>
+            <RadarIcon data-icon="inline-start" className={cn(watching && status === "watching" && "animate-pulse")} aria-hidden />
+            {watching ? "Arrêter" : "Copier le nom des petits"}
+          </Button>
+        </CardAction>
+      </CardHeader>
+      {watching || entries.length ? (
+        <CardContent className="flex flex-col gap-3">
+          {watching ? (
+            <p role="status" className={cn("text-sm", ["offline", "outdated", "error"].includes(status) ? "text-warning" : "text-muted-foreground")}>
+              {statusText}
+            </p>
+          ) : null}
+          {entries.length ? (
+            <ul className="flex flex-col gap-2 text-sm" aria-label="Dernières naissances">
+              {entries.map((entry) => (
+                <li key={entry.id} className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  {entry.reading ? (
+                    <>
+                      <span className="min-w-44">
+                        <span className="font-medium">{colourLabel(family, entry.reading.childId)}</span>
+                        {entry.reading.sex ? <span className="text-muted-foreground"> {entry.reading.sex === "F" ? "♀" : "♂"}</span> : null}
+                        <span className="text-xs text-muted-foreground">
+                          {" "}
+                          · de {colourLabel(family, entry.reading.fatherId)} × {colourLabel(family, entry.reading.motherId)}
+                        </span>
+                      </span>
+                      {entry.copied ? (
+                        <span className="flex items-center gap-1.5">
+                          <MountCode family={family} code={entry.copied} />
+                          <span className="text-xs text-success">copié</span>
+                        </span>
+                      ) : (
+                        <BabyNames family={family} suffix={entry.reading.names.M.slice(1)} />
+                      )}
+                    </>
+                  ) : null}
+                  {entry.error ? <span className="basis-full text-xs text-warning">{entry.error}</span> : null}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </CardContent>
+      ) : null}
+    </Card>
+  );
+}
+
 export function StablePlanner({ family }: { family: MountFamily }) {
   const state = useStableStore((store) => store.families[family.id]);
   return (
     <>
       <StableInput family={family} />
+      <BirthWatch family={family} />
       {state.plan && state.plan.family === family.id ? <PlanResults family={family} plan={state.plan} doneList={state.done} /> : null}
     </>
   );

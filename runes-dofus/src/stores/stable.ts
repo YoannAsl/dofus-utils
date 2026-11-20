@@ -100,6 +100,12 @@ export function togglePairingDone(family: MountFamilyId, index: number) {
   updateFamily(family, { done: [...done] });
 }
 
+/** Coche un accouplement fait, sans le décocher s'il l'était déjà. */
+export function markPairingDone(family: MountFamilyId, index: number) {
+  const done = get().families[family].done;
+  if (!done.includes(index)) updateFamily(family, { done: [...done, index] });
+}
+
 export function clearStable(family: MountFamilyId) {
   updateFamily(family, { draft: "", plan: null, done: [] });
   set({ lastCapture: null, status: "", error: "" });

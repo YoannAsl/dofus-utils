@@ -42,6 +42,15 @@ Keep the OCR server running and capture the popup with that hotkey. Atelier Dofu
 
 You can also paste a screenshot or choose an image file in the OCR panel.
 
+## Copy baby names while breeding
+
+On **Élevage › Étable**, click **Copier le nom des petits** and keep the page open. While Dofus is the window in front, the OCR server reads it about once a second. When the **Accouplement** window shows « Vous avez obtenu », the server puts the baby's 13-letter name in the clipboard: paste it into the name field. The matching row of the plan gets ticked.
+
+- Dofus must run windowed or borderless. Exclusive fullscreen can capture black frames.
+- The server only watches while the page listens, and stops 30 seconds after you click **Arrêter** or close the page.
+- With no plan row for those parents, the father is the parent card marked ♂, or the left one if the icon can't be read.
+- It only reads the screen. It never clicks or types in the game.
+
 Prices, the shattering log and coefficients are stored in the browser under the same keys as earlier versions, so existing data carries over.
 
 ## Develop
