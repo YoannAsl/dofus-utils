@@ -1,6 +1,6 @@
 import { MinusIcon, NotebookPenIcon, PlusIcon, XIcon } from "lucide-react";
 import { useRef, useState } from "react";
-import { EquipmentSearch } from "@/components/brisage/equipment-search";
+import { ItemSearch } from "@/components/item-search";
 import { CopyName, Gain, ItemIcon, Meta, Metric, MetricGrid, MissingBadge } from "@/components/common";
 import { PriceInput } from "@/components/price-input";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { fetchItemWithEffects, itemName, type DofusItem } from "@/lib/dofusdb";
+import { fetchItemWithEffects, itemName, searchEquipment, type DofusItem } from "@/lib/dofusdb";
 import { formatMoney, formatNumber, formatQuantity } from "@/lib/format";
 import { baseRuneByCharacteristic, runeById, runeEffectIds, shortRuneName, type Rune } from "@/lib/runes";
 import { calculateBreakEvenCoefficient, calculateShatter, type ShatterResult } from "@/lib/shatter";
@@ -139,7 +139,7 @@ export function ShatterCalculator() {
         <div className="flex flex-wrap items-end gap-3">
           <Field className="w-auto min-w-72 flex-1">
             <FieldLabel htmlFor="shatterSearch">Objet à briser</FieldLabel>
-            <EquipmentSearch id="shatterSearch" placeholder="Bottes Lunaires, Gelano…" value={search} onValueChange={setSearch} onSelect={selectItem} />
+            <ItemSearch scope="equipment" search={searchEquipment} emptyLabel="Aucun équipement trouvé." id="shatterSearch" placeholder="Bottes Lunaires, Gelano…" value={search} onValueChange={setSearch} onSelect={selectItem} />
           </Field>
           {status ? (
             <p className="pb-2 text-sm text-muted-foreground" role="status">

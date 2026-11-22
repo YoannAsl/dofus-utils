@@ -10,6 +10,8 @@ The **Brisage** tab starts with a shattering calculator. Pick an equipment and s
 
 The tab also keeps a log of broken items. Search for the equipment, enter how many you broke, their unit cost (prefilled from the saved HDV price) and the optional coefficient, then list the runes you got. Each entry shows the cost, the rune value at the current **Prix des runes** prices, and the profit. Runes without a price are flagged instead of counted as zero. The log is stored in the browser and included in **Gérer les prix** exports and imports.
 
+The **Crafts & ventes** tab tracks what you spend crafting and what you earn selling. Record a craft (item, quantity, total cost) or a sale (quantity, total price, HDV tax). For a craft, the recipe cost at your saved prices can fill the cost in one click. For a sale, your saved HDV price can fill the price, and a link fills the 2 % HDV tax. Each item then shows how many you crafted, sold and still hold, the average cost and net sale price per unit, the margin on sold units and the cash balance. Unsold stock is valued at the saved HDV price. The log is stored in the browser and included in **Gérer les prix** exports and imports.
+
 ## Run with OCR
 
 The app is built with Vite, React, TypeScript, TanStack Router and shadcn/ui, so it needs Node.js 20+ the first time. `start.ps1` at the repository root installs dependencies and rebuilds the app automatically when its sources changed, then starts the server:

@@ -131,6 +131,17 @@ export async function searchEquipment(name: string, signal?: AbortSignal) {
   return (await fetchJson<Page<DofusItem>>(url, signal)).data;
 }
 
+export async function searchCraftableItems(name: string, signal?: AbortSignal) {
+  const pattern = marketNamePattern(name.trim().slice(0, 120));
+  if (!pattern) return [];
+  const url = query("items", MARKET_ITEM_FIELDS);
+  url.searchParams.set("$limit", "8");
+  url.searchParams.set("$sort[level]", "-1");
+  url.searchParams.set("hasRecipe", "true");
+  url.searchParams.set("slug.fr[$regex]", pattern);
+  return (await fetchJson<Page<DofusItem>>(url, signal)).data;
+}
+
 export async function fetchItemWithEffects(id: number, signal?: AbortSignal) {
   return fetchJson<DofusItem>(query(`items/${id}`, ["id", "name.fr", "level", "typeId", "img", "iconId", "effects"]), signal);
 }
@@ -179,13 +190,31 @@ export async function fetchItemsForType(typeId: number, signal?: AbortSignal) {
   return items;
 }
 
+export function misreadOePattern(value: string) {
+  const parts = normalizeText(value).match(/[a-z0-9œæ]+/g) || [];
+  return parts
+    .map((part) => {
+      const pattern = marketNamePattern(part);
+      return /^(?:ce|c|g)[a-z]/.test(part) ? pattern.replace(/^(ce|c|g)/, "(?:oe|œ|$1)") : pattern;
+    })
+    .join("[^a-z0-9œæ]*");
+}
+
 export async function findMarketOcrItems(name: string | null | undefined): Promise<DofusItem[]> {
   const pattern = marketNamePattern(name || "");
   if (!pattern) return [];
+  const items = await findMarketItemsByPattern(pattern);
+  if (items.length) return items;
+  const fallback = misreadOePattern(name || "");
+  return fallback === pattern ? [] : findMarketItemsByPattern(fallback);
+}
 
-  const fuelName = new RegExp(`^${pattern}[a-z0-9œæ]*$`);
-  const fuels = Object.values(BREEDING_FUELS).flat().filter((fuel) => fuelName.test(normalizeText(fuel.name)));
-  if (fuels.length) return fuels;
+async function findMarketItemsByPattern(pattern: string): Promise<DofusItem[]> {
+  const allFuels = Object.values(BREEDING_FUELS).flat();
+  for (const fuelName of [new RegExp(`^${pattern}[a-z0-9œæ]*$`), new RegExp(`^${pattern}`)]) {
+    const fuels = allFuels.filter((fuel) => fuelName.test(normalizeText(fuel.name)));
+    if (fuels.length) return fuels;
+  }
 
   const url = query("items", MARKET_ITEM_FIELDS);
   url.searchParams.set("$limit", String(MARKET_PAGE_SIZE));

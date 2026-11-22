@@ -1,12 +1,12 @@
 import type { QueryClient } from "@tanstack/react-query";
-import { createRootRouteWithContext, Link, Outlet, useNavigate } from "@tanstack/react-router";
+import { createRootRouteWithContext, Link, Outlet } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { firstImageFile, OcrPanel } from "@/components/ocr-panel";
 import { PriceTools } from "@/components/price-tools";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { handlePastedImage, setOcrMarketNavigator, startCapturePolling } from "@/stores/ocr";
+import { handlePastedImage, startCapturePolling } from "@/stores/ocr";
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   component: RootLayout,
@@ -18,15 +18,10 @@ const TOOLS = [
   { to: "/items-fm", label: "Items FM" },
   { to: "/elevage", label: "Élevage" },
   { to: "/brisage", label: "Brisage" },
+  { to: "/ventes", label: "Crafts & ventes" },
 ] as const;
 
 function RootLayout() {
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    setOcrMarketNavigator(() => navigate({ to: "/prix" }));
-  }, [navigate]);
-
   useEffect(() => {
     const onPaste = (event: ClipboardEvent) => {
       const items = Array.from(event.clipboardData?.items ?? []);
