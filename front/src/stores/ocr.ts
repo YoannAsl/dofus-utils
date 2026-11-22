@@ -44,7 +44,6 @@ export const useOcrStore = create<OcrState>(() => ({
 const set = useOcrStore.setState;
 let requestToken = 0;
 let deferredCaptureId: string | null = null;
-let openMarket: () => void = () => {};
 
 let imagePasteHandler: ((file: File | Blob) => void) | null = null;
 
@@ -58,10 +57,6 @@ export function setImagePasteHandler(handler: (file: File | Blob) => void) {
 export function handlePastedImage(file: File | Blob) {
   if (imagePasteHandler) imagePasteHandler(file);
   else processOcrImage(file);
-}
-
-export function setOcrMarketNavigator(navigate: () => void) {
-  openMarket = navigate;
 }
 
 export function getOcrTarget(state: OcrState): OcrTarget | null {
@@ -203,8 +198,6 @@ export async function processOcrImage(file: File | Blob) {
       status: target ? "Capture analysée." : "Choisis l’objet cible.",
       priceInput: String(marketPrice ?? ""),
     });
-
-    if (!target) openMarket();
 
     const price = matchedRune ? getOcrApplyPrice(result) : marketPrice;
     if (target && price && !result.warnings?.length) applyPrice(target, price);
