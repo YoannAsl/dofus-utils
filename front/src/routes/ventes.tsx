@@ -101,7 +101,7 @@ function VentesPage() {
   );
 
   function startFor(kind: TradeKind, ledger: ItemLedger) {
-    const stock = ledgerResult(ledger, null).stock;
+    const { stock } = ledger;
     setDraft({
       ...emptyDraft(kind),
       item: itemFromLedger(ledger),

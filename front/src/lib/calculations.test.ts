@@ -175,6 +175,26 @@ describe("craft and sale ledger", () => {
     expect(ledgerResult(summarizeTrades([entry("sale", 1, 100)])[0]!, null)).toMatchObject({ margin: null, unitCost: null, balance: 100 });
   });
 
+  it("keeps a craft made after a sale in stock", () => {
+    const result = ledgerResult(
+      summarizeTrades([entry("craft", 1, 100, 0, "2026-11-02T10:00:00.000Z"), entry("sale", 1, 150, 0, "2026-11-01T10:00:00.000Z")])[0]!,
+      null,
+    );
+    expect(result).toMatchObject({ stock: 1, margin: null, uncostedSales: 1 });
+  });
+
+  it("takes the margin from the proceeds of the sales a craft covers", () => {
+    const result = ledgerResult(
+      summarizeTrades([
+        entry("craft", 1, 100, 0, "2026-11-01T10:00:00.000Z"),
+        entry("sale", 1, 150, 0, "2026-11-02T10:00:00.000Z"),
+        entry("sale", 1, 1000, 0, "2026-11-03T10:00:00.000Z"),
+      ])[0]!,
+      null,
+    );
+    expect(result).toMatchObject({ margin: 50, uncostedSales: 1, unitSale: 575 });
+  });
+
   it("rounds the HDV tax up", () => {
     expect(hdvTax(1234)).toBe(25);
   });
@@ -185,8 +205,11 @@ describe("craft and sale ledger", () => {
       { ...entry("sale", 1, 100), kind: "gift" },
       { ...entry("sale", 0, 100) },
       { ...entry("sale", 1, -1) },
+      { ...entry("sale", 1, 100), date: 2026 },
+      { ...entry("sale", 1, 100), id: "short-date", date: "2026-11-05" },
     ]);
-    expect(parsed).toHaveLength(1);
+    expect(parsed).toHaveLength(2);
+    expect(parsed[1]!.date).toBe("2026-11-05T00:00:00.000Z");
     expect(parsed[0]!.fees).toBe(0);
   });
 });
