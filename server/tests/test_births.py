@@ -15,7 +15,7 @@ from PIL import Image
 
 from dofus_ocr import windows_ocr
 from dofus_ocr import keys
-from dofus_ocr.births import BirthWatcher, Box, KeyPress, event_to_dict, _is_gen, _ocr_image, card_sex, normalize, ocr_lines, read_birth, read_birth_text
+from dofus_ocr.births import BirthWatcher, Box, KeyPress, event_to_dict, _is_gen, _ocr_image, card_sex, normalize, ocr_lines, read_births, read_birth_text
 from dofus_ocr.server import make_handler
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -35,9 +35,8 @@ def birth_capture() -> Image.Image:
 
 class ReadBirthTests(unittest.TestCase):
     def test_reads_the_baby_and_both_parents(self) -> None:
-        text = read_birth_text(ocr_lines(birth_payload()))
+        [text] = read_birth_text(ocr_lines(birth_payload()))
 
-        self.assertIsNotNone(text)
         self.assertEqual(text.child, "Roux")
         self.assertEqual(text.generation, 3)
         self.assertEqual(normalize(text.left_parent), "pourpre et orchidee")
@@ -45,18 +44,18 @@ class ReadBirthTests(unittest.TestCase):
         self.assertTrue(normalize(text.right_parent).endswith("ebene"))
 
     def test_reads_the_female_icon(self) -> None:
-        text = read_birth_text(ocr_lines(birth_payload()))
+        [text] = read_birth_text(ocr_lines(birth_payload()))
         x, y = CARD_OFFSET
-        anchor = Box(text.anchor.x0 - x, text.anchor.y0 - y, text.anchor.x1 - x, text.anchor.y1 - y)
+        gen = Box(text.gen.x0 - x, text.gen.y0 - y, text.gen.x1 - x, text.gen.y1 - y)
 
-        self.assertEqual(card_sex(Image.open(FIXTURES / "birth_card.png"), anchor), "F")
+        self.assertEqual(card_sex(Image.open(FIXTURES / "birth_card.png"), gen, text.anchor.height), "F")
 
     def test_reads_a_card_from_the_game(self) -> None:
         payload = json.loads((FIXTURES / "game_birth_windows_ocr.json").read_text(encoding="utf-8"))
         card = Image.open(FIXTURES / "game_birth_card.png").convert("RGB")
         card = card.resize((card.width * 3, card.height * 3), Image.LANCZOS)
 
-        birth = read_birth(payload, card)
+        [birth] = read_births(payload, card)
 
         self.assertEqual(normalize(birth.child), "emeraude et pourpre")
         self.assertEqual(birth.generation, 6)
@@ -71,11 +70,25 @@ class ReadBirthTests(unittest.TestCase):
         frame = Image.new("RGB", (2000, 1100), (20, 24, 50))
         frame.paste(card, (750, 330))
 
-        birth = read_birth(*_ocr_image(frame))
+        [birth] = read_births(*_ocr_image(frame))
 
         self.assertEqual(normalize(birth.child), "emeraude et pourpre")
         self.assertEqual(birth.generation, 6)
         self.assertEqual((birth.sex, birth.father), ("M", "left"))
+
+    def test_reads_twins_as_two_babies(self) -> None:
+        payload = json.loads((FIXTURES / "twin_birth_windows_ocr.json").read_text(encoding="utf-8"))
+        card = Image.open(FIXTURES / "twin_birth_card.png").convert("RGB")
+        card = card.resize((card.width * 3, card.height * 3), Image.LANCZOS)
+
+        births = read_births(payload, card)
+
+        self.assertEqual(len(births), 2)
+        for birth in births:
+            self.assertEqual(normalize(birth.child), "emeraude et pourpre")
+            self.assertEqual(birth.generation, 6)
+            self.assertEqual((normalize(birth.left_parent), normalize(birth.right_parent)), ("pourpre", "emeraude"))
+            self.assertEqual((birth.sex, birth.father), ("F", "left"))
 
     def test_recognises_misread_gen_labels(self) -> None:
         for text in ["GEN.6", "GENS", "CEN. 1", "CCN. 1", "GEN.", "Gen 3"]:
@@ -84,7 +97,7 @@ class ReadBirthTests(unittest.TestCase):
             self.assertFalse(_is_gen(text), text)
 
     def test_no_card_on_screen(self) -> None:
-        self.assertIsNone(read_birth({"lines": []}, Image.new("RGB", (10, 10))))
+        self.assertEqual(read_births({"lines": []}, Image.new("RGB", (10, 10))), [])
 
 
 class BirthWatcherTests(unittest.TestCase):
@@ -125,8 +138,8 @@ class BirthWatcherTests(unittest.TestCase):
             return screens.pop(0), capture
 
         watcher = BirthWatcher(grab=grab, ocr=ocr, watch_keys=False)
-        original_read = read_birth
-        with patch("dofus_ocr.births.read_birth", side_effect=lambda payload, image: replace(original_read(payload, image), sex=next(sexes))):
+        original_read = read_births
+        with patch("dofus_ocr.births.read_births", side_effect=lambda payload, image: [replace(birth, sex=next(sexes)) for birth in original_read(payload, image)]):
             watcher.step()
             watcher.step()
 
@@ -134,6 +147,26 @@ class BirthWatcherTests(unittest.TestCase):
         self.assertEqual([birth.sex for birth in births], [None, "F"])
         self.assertTrue(births[0].card)
         self.assertEqual(births[0].card, births[1].card)
+
+    def test_reports_each_twin_once(self) -> None:
+        payload = json.loads((FIXTURES / "twin_birth_windows_ocr.json").read_text(encoding="utf-8"))
+        card = Image.open(FIXTURES / "twin_birth_card.png").convert("RGB")
+        card = card.resize((card.width * 3, card.height * 3), Image.LANCZOS)
+        shades = iter([0, 40])
+
+        def grab():
+            frame = card.copy()
+            frame.paste((next(shades),) * 3, (0, 0, 600, 600))
+            return frame
+
+        watcher = BirthWatcher(grab=grab, ocr=lambda frame: (payload, card), watch_keys=False)
+        watcher.step()
+        watcher.step()
+
+        _, births, _ = watcher.wait(0, timeout=0)
+        self.assertEqual(len(births), 2)
+        self.assertNotEqual(births[0].card, births[1].card)
+        self.assertEqual(births[0].litter, births[1].litter)
 
     def test_waits_for_the_dofus_window(self) -> None:
         watcher = BirthWatcher(grab=lambda: None, ocr=lambda frame: ({}, frame), watch_keys=False)

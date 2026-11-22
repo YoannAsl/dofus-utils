@@ -71,7 +71,17 @@ async function stepQueue(direction: 1 | -1, quiet = false) {
   else if (!quiet) toast.info("Tous les accouplements du plan sont faits.");
 }
 
+let litter = { id: "", copied: null as string | null, waiting: [] as string[] };
+
 async function handlePaste(text: string) {
+  const queued = useBirthStore.getState().queued;
+  if (queued?.role === "baby" && queued.name === text && litter.waiting.length) {
+    const name = litter.waiting.shift()!;
+    litter.copied = name;
+    await queueName({ role: "baby", name, pairingIndex: queued.pairingIndex });
+    toast.success(`Nom du jumeau copié · ${name}`);
+    return;
+  }
   const context = planContext();
   if (!context) return;
   const next = afterPaste(context.order, context.pairings, context.done, useBirthStore.getState().queued, text);
@@ -121,11 +131,19 @@ async function handleBirth(birth: BirthEvent) {
     const ticked = index !== null && (seen?.pairingIndex === index ? seen.ticked : !stable.done.includes(index));
     if (birth.card) seenCards.set(birth.card, { logId: entry.id, pairingIndex: index, ticked });
     if (index !== null) markPairingDone(family, index);
-    if (result.sex) {
+    if (birth.litter !== litter.id) litter = { id: birth.litter ?? "", copied: null, waiting: [] };
+    const twin = result.sex && litter.id && litter.copied && litter.copied !== result.names[result.sex] ? litter.copied : null;
+    if (result.sex && twin) {
+      const name = result.names[result.sex];
+      litter.waiting.push(name);
+      entry.error = `Jumeau : ${name} sera copié quand tu auras collé ${twin}.`;
+      toast.info(entry.error);
+    } else if (result.sex) {
       const name = result.names[result.sex];
       try {
         await copyToClipboard(name);
         entry.copied = name;
+        if (litter.id) litter.copied = name;
         set({ queued: { role: "baby", name, pairingIndex: result.pairingIndex } });
         toast.success(`Nom copié · ${name}`);
       } catch (error) {

@@ -62,6 +62,7 @@ class BirthText:
     left_parent: str
     right_parent: str
     anchor: Box
+    gen: Box
     left_gen: Box | None = None
     right_gen: Box | None = None
 
@@ -75,6 +76,7 @@ class Birth:
     sex: str | None
     father: str | None = None
     card: str = ""
+    litter: str = ""
 
 
 @dataclass(frozen=True)
@@ -116,32 +118,40 @@ def _join(lines: list[Line]) -> str:
     return " ".join(line.text.strip() for line in sorted(lines, key=lambda line: (line.box.y0, line.box.x0))).strip()
 
 
-def read_birth_text(lines: list[Line]) -> BirthText | None:
+def read_birth_text(lines: list[Line]) -> list[BirthText]:
     anchor = next((line.box for line in lines if "obtenu" in normalize(line.text)), None)
     if anchor is None:
-        return None
+        return []
     unit = anchor.height or 1.0
     card_x0 = anchor.x0 - 0.3 * anchor.width
     card_x1 = anchor.x1 + 0.3 * anchor.width
-    in_card = lambda box: card_x0 <= box.center_x <= card_x1
+    in_cards = lambda box: card_x0 <= box.center_x <= card_x1
 
-    gen_lines = [line for line in lines if _is_gen(line.text) and line.box.y0 > anchor.y1 and in_card(line.box)]
+    gen_lines = [line for line in lines if _is_gen(line.text) and line.box.y0 > anchor.y1 and in_cards(line.box)]
     if not gen_lines:
-        return None
-    gen = min(gen_lines, key=lambda line: line.box.y0)
-    digits = re.findall(r"\d+", gen.text)
-    generation = int(digits[-1]) if digits else None
+        return []
+    top = min(line.box.y0 for line in gen_lines)
+    gens = sorted((line for line in gen_lines if line.box.y0 <= top + unit), key=lambda line: line.box.x0)
 
-    child_lines = [
-        line
-        for line in lines
-        if in_card(line.box)
-        and gen.box.y1 - 1 <= line.box.y0 <= gen.box.y1 + 4 * unit
-        and not re.search(r"xp|\d", normalize(line.text))
-    ]
-    child = _join(child_lines)
-    if not child:
-        return None
+    def nearest_gen(box: Box) -> Line:
+        return min(gens, key=lambda gen: abs(gen.box.center_x - box.center_x))
+
+    cards = []
+    for gen in gens:
+        digits = re.findall(r"\d+", gen.text)
+        child_lines = [
+            line
+            for line in lines
+            if in_cards(line.box)
+            and nearest_gen(line.box) is gen
+            and gen.box.y1 - 1 <= line.box.y0 <= gen.box.y1 + 4 * unit
+            and not re.search(r"xp|\d", normalize(line.text))
+        ]
+        child = _join(child_lines)
+        if child:
+            cards.append((child, int(digits[-1]) if digits else None, gen.box))
+    if not cards:
+        return []
 
     def parent(side: Callable[[Box], bool]) -> str:
         return _join(
@@ -163,7 +173,9 @@ def read_birth_text(lines: list[Line]) -> BirthText | None:
         boxes = [line.box for line in lines if side(line.box) and _is_gen(line.text) and anchor.y0 - 6 * unit <= line.box.center_y <= anchor.y1]
         return min(boxes, key=lambda box: abs(box.center_y - anchor.center_y), default=None)
 
-    return BirthText(child, generation, parent(left_side), parent(right_side), anchor, parent_gen(left_side), parent_gen(right_side))
+    left, right = parent(left_side), parent(right_side)
+    left_gen, right_gen = parent_gen(left_side), parent_gen(right_side)
+    return [BirthText(child, generation, left, right, anchor, gen, left_gen, right_gen) for child, generation, gen in cards]
 
 
 def _pixel_kind(pixel: tuple[int, int, int], min_value: float = 0.36, min_saturation: float = 0.15) -> str | None:
@@ -179,13 +191,12 @@ def _pixel_kind(pixel: tuple[int, int, int], min_value: float = 0.36, min_satura
     return None
 
 
-def card_sex(image: Image.Image, anchor: Box) -> str | None:
-    unit = anchor.height or 1.0
+def card_sex(image: Image.Image, gen: Box, unit: float) -> str | None:
     region = (
-        int(anchor.x1 - 3 * unit),
-        int(anchor.y1 + 1 * unit),
-        int(anchor.x1 + 1.5 * unit),
-        int(anchor.y1 + 4.5 * unit),
+        int(gen.center_x + 2.3 * unit),
+        int(gen.y0 - 12 * unit),
+        int(gen.center_x + 6.8 * unit),
+        int(gen.y0 - 8.5 * unit),
     )
     return _icon_sex(image, region)
 
@@ -219,17 +230,18 @@ def _icon_sex(image: Image.Image, region: tuple[int, int, int, int], **threshold
     return None
 
 
-def read_birth(payload: dict, image: Image.Image) -> Birth | None:
-    text = read_birth_text(ocr_lines(payload))
-    if text is None:
-        return None
-    unit = text.anchor.height or 1.0
-    left = parent_sex(image, text.left_gen, unit) if text.left_gen else None
-    right = parent_sex(image, text.right_gen, unit) if text.right_gen else None
+def read_births(payload: dict, image: Image.Image) -> list[Birth]:
+    texts = read_birth_text(ocr_lines(payload))
+    if not texts:
+        return []
+    first = texts[0]
+    unit = first.anchor.height or 1.0
+    left = parent_sex(image, first.left_gen, unit) if first.left_gen else None
+    right = parent_sex(image, first.right_gen, unit) if first.right_gen else None
     father = "left" if (left == "M" or right == "F") and "F" != left and "M" != right else None
     if father is None and (right == "M" or left == "F") and "F" != right and "M" != left:
         father = "right"
-    return Birth(text.child, text.generation, text.left_parent, text.right_parent, card_sex(image, text.anchor), father)
+    return [Birth(text.child, text.generation, text.left_parent, text.right_parent, card_sex(image, text.gen, unit), father) for text in texts]
 
 
 _dpi_aware = False
@@ -368,7 +380,7 @@ class BirthWatcher:
         self._last_demand = 0.0
         self._thread: Thread | None = None
         self.status = "idle"
-        self._card: Birth | None = None
+        self._cards: list[Birth] = []
         self._last_frame: Image.Image | None = None
 
     @property
@@ -428,17 +440,18 @@ class BirthWatcher:
         self._last_frame = thumbnail
 
         payload, read_image = self._ocr(frame)
-        birth = read_birth(payload, read_image)
-        if birth is None:
-            self._card = None
-            return
-        previous = self._card
-        same = previous is not None and _same_card(previous, birth)
-        if same and (previous.sex is not None or birth.sex is None):
-            return
-        birth = replace(birth, card=previous.card if same else uuid.uuid4().hex)
-        self._card = birth
-        self._add(birth)
+        births = read_births(payload, read_image)
+        previous = self._cards
+        same = len(previous) == len(births) and all(_same_card(a, b) for a, b in zip(previous, births))
+        if not same:
+            litter = uuid.uuid4().hex
+            births = [replace(birth, card=uuid.uuid4().hex, litter=litter) for birth in births]
+        else:
+            births = [replace(birth, sex=birth.sex or old.sex, card=old.card, litter=old.litter) for old, birth in zip(previous, births)]
+        self._cards = births
+        for old, birth in zip(previous if same else [None] * len(births), births):
+            if old is None or (old.sex is None and birth.sex is not None):
+                self._add(birth)
 
 
 def _same_card(a: Birth, b: Birth) -> bool:

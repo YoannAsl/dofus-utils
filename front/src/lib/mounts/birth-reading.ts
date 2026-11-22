@@ -11,6 +11,7 @@ export interface BirthEvent {
   sex: Sex | null;
   father?: "left" | "right" | null;
   card?: string;
+  litter?: string;
 }
 
 export interface BirthReading {
