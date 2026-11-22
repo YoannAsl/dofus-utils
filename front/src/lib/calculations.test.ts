@@ -4,6 +4,7 @@ import { calculateRecipeCost, calculateRuneAcquisition, getOcrApplyPrice, getTar
 import { parsePrice, parsePriceMap } from "@/lib/prices";
 import { findRuneByName, findRuneByOcrName, runeFamily, runes } from "@/lib/runes";
 import { calculateBreakEvenCoefficient, calculateBreakResult, calculateShatter } from "@/lib/shatter";
+import { hdvTax, ledgerResult, parseTradeEntries, summarizeTrades, type TradeEntry } from "@/lib/trades";
 import { parseBrisageEntries } from "@/stores/brisage";
 
 const rune = (name: string) => runes.find((entry) => entry.name === name)!;
@@ -140,5 +141,52 @@ describe("parsing", () => {
     const entries = parseBrisageEntries([valid, { ...valid, id: "b", quantity: 0 }, { ...valid, id: "c", runes: [{ id: "999999", quantity: 1 }] }, null]);
     expect(entries.map((entry) => entry.id)).toEqual(["a"]);
     expect(entries[0]).toMatchObject({ itemId: null, iconId: null, level: null, runes: [{ id: "1519", quantity: 3 }] });
+  });
+});
+
+describe("craft and sale ledger", () => {
+  const entry = (kind: "craft" | "sale", quantity: number, amount: number, fees = 0, date = "2026-11-01T10:00:00.000Z"): TradeEntry => ({
+    id: `${kind}-${quantity}-${amount}`,
+    date,
+    kind,
+    itemId: 548,
+    itemName: "Potion de Rappel",
+    iconId: null,
+    level: 1,
+    quantity,
+    amount,
+    fees,
+  });
+
+  it("averages craft cost and nets sale taxes per item", () => {
+    const [ledger] = summarizeTrades([entry("craft", 10, 1000), entry("craft", 10, 3000), entry("sale", 5, 2000, 40)]);
+    const result = ledgerResult(ledger!, 300);
+    expect(ledger).toMatchObject({ crafted: 20, sold: 5, spent: 4000, revenue: 2000, fees: 40 });
+    expect(result).toMatchObject({ stock: 15, netRevenue: 1960, balance: -2040, unitCost: 200, unitSale: 392, margin: 960, stockValue: 4500 });
+  });
+
+  it("only counts margin on sold units that have a recorded craft", () => {
+    const result = ledgerResult(summarizeTrades([entry("craft", 2, 200), entry("sale", 4, 800)])[0]!, null);
+    expect(result).toMatchObject({ stock: 0, margin: 200, uncostedSales: 2, stockValue: null });
+  });
+
+  it("has no margin before any sale or any craft", () => {
+    expect(ledgerResult(summarizeTrades([entry("craft", 1, 100)])[0]!, null).margin).toBeNull();
+    expect(ledgerResult(summarizeTrades([entry("sale", 1, 100)])[0]!, null)).toMatchObject({ margin: null, unitCost: null, balance: 100 });
+  });
+
+  it("rounds the HDV tax up", () => {
+    expect(hdvTax(1234)).toBe(25);
+  });
+
+  it("drops malformed stored entries and ignores fees on crafts", () => {
+    const parsed = parseTradeEntries([
+      entry("craft", 1, 100, 5),
+      { ...entry("sale", 1, 100), kind: "gift" },
+      { ...entry("sale", 0, 100) },
+      { ...entry("sale", 1, -1) },
+    ]);
+    expect(parsed).toHaveLength(1);
+    expect(parsed[0]!.fees).toBe(0);
   });
 });

@@ -131,6 +131,17 @@ export async function searchEquipment(name: string, signal?: AbortSignal) {
   return (await fetchJson<Page<DofusItem>>(url, signal)).data;
 }
 
+export async function searchCraftableItems(name: string, signal?: AbortSignal) {
+  const pattern = marketNamePattern(name.trim().slice(0, 120));
+  if (!pattern) return [];
+  const url = query("items", MARKET_ITEM_FIELDS);
+  url.searchParams.set("$limit", "8");
+  url.searchParams.set("$sort[level]", "-1");
+  url.searchParams.set("hasRecipe", "true");
+  url.searchParams.set("slug.fr[$regex]", pattern);
+  return (await fetchJson<Page<DofusItem>>(url, signal)).data;
+}
+
 export async function fetchItemWithEffects(id: number, signal?: AbortSignal) {
   return fetchJson<DofusItem>(query(`items/${id}`, ["id", "name.fr", "level", "typeId", "img", "iconId", "effects"]), signal);
 }

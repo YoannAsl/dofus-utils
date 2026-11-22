@@ -15,6 +15,7 @@ import { Route as ElevageRouteImport } from './routes/elevage'
 import { Route as ItemsFmRouteImport } from './routes/items-fm'
 import { Route as PrixRouteImport } from './routes/prix'
 import { Route as RunesRouteImport } from './routes/runes'
+import { Route as VentesRouteImport } from './routes/ventes'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -46,6 +47,11 @@ const RunesRoute = RunesRouteImport.update({
   path: '/runes',
   getParentRoute: () => rootRouteImport,
 } as any)
+const VentesRoute = VentesRouteImport.update({
+  id: '/ventes',
+  path: '/ventes',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -54,6 +60,7 @@ export interface FileRoutesByFullPath {
   '/items-fm': typeof ItemsFmRoute
   '/prix': typeof PrixRoute
   '/runes': typeof RunesRoute
+  '/ventes': typeof VentesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -62,6 +69,7 @@ export interface FileRoutesByTo {
   '/items-fm': typeof ItemsFmRoute
   '/prix': typeof PrixRoute
   '/runes': typeof RunesRoute
+  '/ventes': typeof VentesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -71,12 +79,15 @@ export interface FileRoutesById {
   '/items-fm': typeof ItemsFmRoute
   '/prix': typeof PrixRoute
   '/runes': typeof RunesRoute
+  '/ventes': typeof VentesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/brisage' | '/elevage' | '/items-fm' | '/prix' | '/runes'
+  fullPaths:
+    '/' | '/brisage' | '/elevage' | '/items-fm' | '/prix' | '/runes' | '/ventes'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/brisage' | '/elevage' | '/items-fm' | '/prix' | '/runes'
+  to:
+    '/' | '/brisage' | '/elevage' | '/items-fm' | '/prix' | '/runes' | '/ventes'
   id:
     | '__root__'
     | '/'
@@ -85,6 +96,7 @@ export interface FileRouteTypes {
     | '/items-fm'
     | '/prix'
     | '/runes'
+    | '/ventes'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -94,6 +106,7 @@ export interface RootRouteChildren {
   ItemsFmRoute: typeof ItemsFmRoute
   PrixRoute: typeof PrixRoute
   RunesRoute: typeof RunesRoute
+  VentesRoute: typeof VentesRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -140,6 +153,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RunesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/ventes': {
+      id: '/ventes'
+      path: '/ventes'
+      fullPath: '/ventes'
+      preLoaderRoute: typeof VentesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -150,6 +170,7 @@ const rootRouteChildren: RootRouteChildren = {
   ItemsFmRoute: ItemsFmRoute,
   PrixRoute: PrixRoute,
   RunesRoute: RunesRoute,
+  VentesRoute: VentesRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

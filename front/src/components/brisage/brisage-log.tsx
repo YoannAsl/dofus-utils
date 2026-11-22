@@ -1,6 +1,6 @@
 import { PencilIcon, PlusIcon, Trash2Icon, XIcon } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { EquipmentSearch } from "@/components/brisage/equipment-search";
+import { ItemSearch } from "@/components/item-search";
 import { CopyName, EmptyRow, Gain, ItemIcon, Meta, Metric, MetricGrid, MissingBadge, PageHeader } from "@/components/common";
 import {
   AlertDialog,
@@ -16,7 +16,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { itemName, type DofusItem } from "@/lib/dofusdb";
+import { itemName, searchEquipment, type DofusItem } from "@/lib/dofusdb";
 import { formatMoney, formatNumber, formatQuantity, plural, round2 } from "@/lib/format";
 import { parsePrice } from "@/lib/prices";
 import { findRuneByName, runeById, runesByName, shortRuneName } from "@/lib/runes";
@@ -309,7 +309,7 @@ function BrisageForm() {
             <Field className="w-auto min-w-72 flex-1">
               <FieldLabel htmlFor="brisageItem">Objet brisé</FieldLabel>
               <div ref={searchInput}>
-                <EquipmentSearch
+                <ItemSearch scope="equipment" search={searchEquipment} emptyLabel="Aucun équipement trouvé."
                   id="brisageItem"
                   placeholder="Gelano, Cape Bouffante…"
                   value={draft.itemSearch}

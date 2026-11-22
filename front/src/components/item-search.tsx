@@ -3,10 +3,13 @@ import { useEffect, useRef, useState } from "react";
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
 import { ItemIcon, Meta } from "@/components/common";
 import { Input } from "@/components/ui/input";
-import { itemName, marketNamePattern, searchEquipment, type DofusItem } from "@/lib/dofusdb";
+import { itemName, marketNamePattern, type DofusItem } from "@/lib/dofusdb";
 
-export function EquipmentSearch({
+export function ItemSearch({
   id,
+  scope,
+  search,
+  emptyLabel,
   value,
   onValueChange,
   onSelect,
@@ -17,6 +20,9 @@ export function EquipmentSearch({
   onValueChange: (value: string) => void;
   onSelect: (item: DofusItem) => void;
   placeholder?: string;
+  scope: string;
+  search: (term: string, signal: AbortSignal) => Promise<DofusItem[]>;
+  emptyLabel: string;
 }) {
   const container = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
@@ -29,8 +35,8 @@ export function EquipmentSearch({
 
   const enabled = open && Boolean(marketNamePattern(term));
   const results = useQuery({
-    queryKey: ["equipment", term],
-    queryFn: ({ signal }) => searchEquipment(term, signal),
+    queryKey: ["item-search", scope, term],
+    queryFn: ({ signal }) => search(term, signal),
     enabled,
   });
   const pending = term !== value.trim().slice(0, 120) || results.isFetching;
@@ -79,7 +85,7 @@ export function EquipmentSearch({
         ) : results.isError ? (
           <p className="px-2 py-1.5 text-sm text-muted-foreground">Catalogue DofusDB indisponible.</p>
         ) : !results.data?.length ? (
-          <p className="px-2 py-1.5 text-sm text-muted-foreground">Aucun équipement trouvé.</p>
+          <p className="px-2 py-1.5 text-sm text-muted-foreground">{emptyLabel}</p>
         ) : (
           results.data.map((item) => (
             <button

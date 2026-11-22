@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { mergeBrisageEntries, mergeShatterCoefficients, useBrisageStore } from "@/stores/brisage";
 import { clearPrices, mergePrices, priceSnapshot } from "@/stores/prices";
+import { mergeTradeEntries, useTradeStore } from "@/stores/trades";
 
 function exportPrices() {
   const { entries, coefficients } = useBrisageStore.getState();
@@ -24,6 +25,7 @@ function exportPrices() {
     ...priceSnapshot(),
     brisages: entries,
     brisageCoefficients: coefficients,
+    trades: useTradeStore.getState().entries,
   };
   const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }));
   const link = document.createElement("a");
@@ -40,6 +42,7 @@ async function importPrices(file: File) {
     mergePrices(payload);
     mergeBrisageEntries(payload.brisages);
     mergeShatterCoefficients(payload.brisageCoefficients);
+    mergeTradeEntries(payload.trades);
     toast.success("Prix importés.");
   } catch {
     toast.error("Import impossible: le fichier JSON n'est pas valide.");
@@ -90,7 +93,7 @@ export function PriceTools() {
           <AlertDialogHeader>
             <AlertDialogTitle>Effacer tous les prix saisis ?</AlertDialogTitle>
             <AlertDialogDescription>
-              Le suivi des brisages est conservé.
+              Le suivi des brisages et des ventes est conservé.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
