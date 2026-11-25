@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { PencilIcon, PlusIcon, Trash2Icon, XIcon } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { ItemSearch } from "@/components/item-search";
@@ -21,6 +22,7 @@ import { formatMoney, formatNumber, formatQuantity, plural, round2 } from "@/lib
 import { parsePrice } from "@/lib/prices";
 import { findRuneByName, runeById, runesByName, shortRuneName } from "@/lib/runes";
 import { calculateBreakResult } from "@/lib/shatter";
+import { fetchCraftCost } from "@/lib/craft-cost";
 import { cn } from "@/lib/utils";
 import {
   deleteEntry,
@@ -245,6 +247,7 @@ function BrisageForm() {
   const [errors, setErrors] = useState<string[]>([]);
   const form = useRef<HTMLFormElement>(null);
   const quantityInput = useRef<HTMLInputElement>(null);
+  const queryClient = useQueryClient();
   const runeList = useRef<HTMLDivElement>(null);
   const searchInput = useRef<HTMLDivElement>(null);
   const focusLastRune = useRef(false);
@@ -295,10 +298,14 @@ function BrisageForm() {
     searchInput.current?.querySelector("input")?.focus();
   }
 
-  function selectItem(item: DofusItem) {
+  async function selectItem(item: DofusItem) {
     const price = getPrice(item.id);
     change({ item, itemSearch: itemName(item), ...(price === null ? {} : { unitCost: String(price) }) });
     quantityInput.current?.focus();
+    if (price !== null) return;
+    const craftCost = await fetchCraftCost(queryClient, item);
+    const { draft } = useBrisageStore.getState();
+    if (craftCost !== null && draft.item?.id === item.id && !draft.unitCost.trim()) updateDraft({ unitCost: String(craftCost) });
   }
 
   return (
