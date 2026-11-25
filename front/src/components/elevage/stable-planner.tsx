@@ -332,7 +332,7 @@ function PairingRow({ family, row, done, queued }: { family: MountFamily; row: P
             {pairing.potion ? (
               <Badge
                 className="bg-info-muted text-info"
-                title={`La couleur visée manque de ${pairing.potion === "F" ? "femelles" : "mâles"} dans l’étable`}
+                title={`Dans l’étable, des partenaires attendent ${pairing.potion === "F" ? "une femelle" : "un mâle"} de cette couleur, pas ${pairing.potion === "F" ? "un mâle" : "une femelle"}`}
               >
                 Potion {pairing.potion === "F" ? "femelle" : "mâle"}
               </Badge>

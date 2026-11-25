@@ -1,13 +1,13 @@
-import { breedingGraph } from "@/lib/mounts/breeding-graph";
+import { ancestorsOf, breedingGraph } from "@/lib/mounts/breeding-graph";
 import { getMountFamily, type MountFamily, pairKey } from "@/lib/mounts/family";
 import { planStep, type ObjectiveMode, type RebalanceLine } from "@/lib/mounts/horizon";
 import { parseMountName } from "@/lib/mounts/names";
-import { likelyChild, successChance } from "@/lib/mounts/offspring";
+import { likelyChild, offspringChances, successChance } from "@/lib/mounts/offspring";
+import { choosePotions } from "@/lib/mounts/potion";
 import type { Mount, MountFamilyId, Sex } from "@/lib/mounts/types";
 
 const PARENT_LEVEL = 40;
 const CAPTURE_BUDGET = 30;
-const POTION_MARGIN = 3;
 
 export interface PlannerInput {
   family: MountFamilyId;
@@ -84,16 +84,6 @@ function geneticColour(mount: Mount, family: MountFamily, stats: ColourStats) {
   const partnersB = partnersAvailable(stats, b, mount.sex);
   if (partnersA !== partnersB) return partnersA > partnersB ? a : b;
   return a < b ? a : b;
-}
-
-function potionFor(family: MountFamily, childId: string, { counts, females }: ColourStats): Sex | null {
-  const generation = family.byId.get(childId)?.generation;
-  if (!generation || generation < 2 || generation % 2 !== 0) return null;
-  const female = females[childId] ?? 0;
-  const male = (counts[childId] ?? 0) - female;
-  if (male - female >= POTION_MARGIN) return "F";
-  if (female - male >= POTION_MARGIN) return "M";
-  return null;
 }
 
 const isRich = (mount: PlannedMount, family: MountFamily) =>
@@ -184,8 +174,9 @@ export function planStable({ family: familyId, mounts: names, mode = "genetons",
   }
 
   const chance = successChance(2 * PARENT_LEVEL);
+  const graph = breedingGraph(family.colours);
   const step = planStep({
-    graph: breedingGraph(family.colours),
+    graph,
     mode,
     chance,
     captureBudget: CAPTURE_BUDGET,
@@ -222,6 +213,7 @@ export function planStable({ family: familyId, mounts: names, mode = "genetons",
     });
   };
 
+  const byCode = new Map(mounts.map((mount) => [mount.code, mount]));
   const pairings: Pairing[] = [];
   let unmatched = 0;
   for (const reproduction of reproductions) {
@@ -246,7 +238,7 @@ export function planStable({ family: familyId, mounts: names, mode = "genetons",
       femalesLeft.splice(femalesLeft.indexOf(female), 1);
       pairings.push({
         pair: [male.code, female.code],
-        potion: potionFor(family, reproduction.childId, geneticStats),
+        potion: null,
         final: false,
         intended: reproduction.childId,
         target: childOf(male, female),
@@ -266,6 +258,20 @@ export function planStable({ family: familyId, mounts: names, mode = "genetons",
     family,
   ))
     pairings.push({ pair: [male.code, female.code], potion: null, final: true, target: childOf(male, female) });
+
+  const bred = pairings.filter((pairing) => !pairing.final);
+  const useful = success ? ancestorsOf(graph, graph.ids.map((id) => wanted[id] ?? 0)) : null;
+  const potions = choosePotions({
+    graph,
+    ...geneticStats,
+    usefulChild: useful ? (node) => useful[node] === 1 : undefined,
+    attempts: bred.map((pairing) => {
+      const [male, female] = pairing.pair.map((code) => byCode.get(code)!) as [PlannedMount, PlannedMount];
+      const odds = pairing.target ? offspringChances(family, male, female).find((odd) => odd.colourId === pairing.target) : undefined;
+      return { childId: pairing.target, chance: odds?.probability ?? 0 };
+    }),
+  });
+  bred.forEach((pairing, index) => (pairing.potion = potions[index] ?? null));
 
   const inPairs = new Set(pairings.flatMap((pairing) => pairing.pair));
   const impures = mounts
