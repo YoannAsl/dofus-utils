@@ -1,0 +1,8 @@
+{
+  "name": "verify-atelier-drive",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "playwright": "1.65.1"
+  }
+}
