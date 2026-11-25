@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { MinusIcon, NotebookPenIcon, PlusIcon, XIcon } from "lucide-react";
 import { useRef, useState } from "react";
 import { ItemSearch } from "@/components/item-search";
@@ -13,9 +14,10 @@ import { fetchItemWithEffects, itemName, searchEquipment, type DofusItem } from 
 import { formatMoney, formatNumber, formatQuantity } from "@/lib/format";
 import { baseRuneByCharacteristic, runeById, runeEffectIds, shortRuneName, type Rune } from "@/lib/runes";
 import { calculateBreakEvenCoefficient, calculateShatter, type ShatterResult } from "@/lib/shatter";
+import { fetchCraftCost } from "@/lib/craft-cost";
 import { cn } from "@/lib/utils";
 import { draftRune, fillDraft, saveCoefficient, useBrisageStore } from "@/stores/brisage";
-import { usePrice, usePriceReader } from "@/stores/prices";
+import { getPrice, setPrice, usePrice, usePriceReader } from "@/stores/prices";
 
 interface Line {
   key: string;
@@ -65,6 +67,7 @@ export function ShatterCalculator() {
   const coefficients = useBrisageStore((state) => state.coefficients);
   const readPrice = usePriceReader();
   const cost = usePrice(item?.id);
+  const queryClient = useQueryClient();
 
   async function selectItem(summary: DofusItem) {
     const token = ++loadToken.current;
@@ -79,6 +82,9 @@ export function ShatterCalculator() {
       setFocusKey(null);
       setCoefficientText(String(coefficients[loaded.id] ?? 100));
       setStatus(built.length ? "" : "Cet objet n’a aucune caractéristique qui donne des runes.");
+      if (getPrice(loaded.id) !== null) return;
+      const craftCost = await fetchCraftCost(queryClient, summary);
+      if (craftCost !== null && token === loadToken.current && getPrice(loaded.id) === null) setPrice(loaded.id, craftCost);
     } catch {
       if (token === loadToken.current) setStatus("Objet indisponible sur DofusDB. Réessaie.");
     }
