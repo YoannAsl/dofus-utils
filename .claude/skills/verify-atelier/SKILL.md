@@ -64,11 +64,13 @@ Journeys live in `scripts/drive/journeys/`, one per feature in the map:
 | `elevage-carburants` | [features/elevage-carburants.md](features/elevage-carburants.md) |
 | `brisage-calculator` | [features/brisage-calculator.md](features/brisage-calculator.md) |
 | `brisage-log` | [features/brisage-log.md](features/brisage-log.md) |
+| `elevage-potions` | [features/elevage-potions.md](features/elevage-potions.md) |
+| `brisage-craft-cost` | [features/brisage-craft-cost.md](features/brisage-craft-cost.md) |
 
 Run all of them after a change to shared code (`components/common`, `item-search`, `price-input`, stores, routing):
 
 ```powershell
-node .claude/skills/verify-atelier/scripts/drive/run.mjs elevage-etable elevage-couples elevage-carburants brisage-calculator brisage-log
+node .claude/skills/verify-atelier/scripts/drive/run.mjs elevage-etable elevage-couples elevage-carburants elevage-potions brisage-calculator brisage-log brisage-craft-cost
 ```
 
 Each line of output is a user step. The run ends with `PASS` or `FAIL → <evidence dir>` per journey, and exits 1 if any failed.
