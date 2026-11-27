@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import mimetypes
 import re
+import subprocess
 import sys
 from collections import deque
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -15,6 +17,7 @@ from uuid import uuid4
 
 from . import births as births_module
 from .births import BirthWatcher, event_to_dict
+from .smithmagic import SmithmagicWatcher, reading_to_dict
 from .parser import parse_auction_ocr, result_to_dict
 from .windows_ocr import run_windows_ocr
 from . import windows_ocr
@@ -26,6 +29,8 @@ OCR_PATH = "/api/ocr"
 OCR_TEXT_PATH = "/api/ocr/text"
 BIRTHS_PATH = "/api/births"
 BIRTHS_WAIT_SECONDS = 20.0
+SMITHMAGIC_PATH = "/api/smithmagic"
+SMITHMAGIC_WAIT_SECONDS = 20.0
 CLIPBOARD_PATH = "/api/clipboard"
 MOUNT_NAME = re.compile(r"^[MF][A-Z]{12}$")
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
@@ -46,12 +51,13 @@ class RunesOcrHandler(SimpleHTTPRequestHandler):
     captures_lock: Lock
     capture_session: str
     birth_watcher: BirthWatcher
+    smithmagic_watcher: SmithmagicWatcher
 
     def log_message(self, format: str, *args) -> None:
         return
 
     def end_headers(self) -> None:
-        if self.path.split("?", 1)[0] in (CAPTURES_PATH, BIRTHS_PATH):
+        if self.path.split("?", 1)[0] in (CAPTURES_PATH, BIRTHS_PATH, SMITHMAGIC_PATH):
             self.send_header("Cache-Control", "no-store")
             self.send_header("X-Content-Type-Options", "nosniff")
         super().end_headers()
@@ -65,6 +71,10 @@ class RunesOcrHandler(SimpleHTTPRequestHandler):
         if path == BIRTHS_PATH:
             if self._allow_capture_request():
                 self._send_births(query)
+            return
+        if path == SMITHMAGIC_PATH:
+            if self._allow_capture_request():
+                self._send_smithmagic(query)
             return
         if path == "/api/health":
             self._send_json(build_health_payload())
@@ -159,6 +169,15 @@ class RunesOcrHandler(SimpleHTTPRequestHandler):
                 "status": status,
             }
         )
+
+    def _send_smithmagic(self, query: str) -> None:
+        cursor = parse_qs(query).get("after", [""])[0]
+        session, _, sequence = cursor.partition(":")
+        after = -1
+        if session == self.capture_session and len(sequence) <= 16 and sequence.isdecimal():
+            after = int(sequence)
+        latest, reading, status = self.smithmagic_watcher.wait(after, SMITHMAGIC_WAIT_SECONDS)
+        self._send_json({"cursor": f"{self.capture_session}:{latest}", "status": status, "reading": reading_to_dict(reading)})
 
     def _receive_capture(self) -> None:
         if self.headers.get("Content-Type") != "image/png":
@@ -267,6 +286,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=default_static_dir(),
         help="Directory containing the built runes web app. Defaults to front/dist.",
     )
+    parser.add_argument("--overlay", action="store_true", help="Also open the always-on-top smithmagic overlay.")
     return parser
 
 
@@ -281,6 +301,7 @@ def make_handler(static_dir: Path):
         captures_lock = Lock()
         capture_session = uuid4().hex
         birth_watcher = BirthWatcher()
+        smithmagic_watcher = SmithmagicWatcher()
 
         def __init__(self, *args, **kwargs):
             super().__init__(*args, directory=str(static_dir), **kwargs)
@@ -303,6 +324,7 @@ def build_health_payload() -> dict:
         "windows_ocr_file": str(Path(windows_ocr.__file__).resolve()),
         "births": True,
         "keys": True,
+        "smithmagic": True,
     }
 
 
@@ -322,6 +344,12 @@ def main(argv: list[str] | None = None) -> int:
     safe_print(f"OCR module: {Path(windows_ocr.__file__).resolve()}")
     if not windows_ocr.in_process_available():
         safe_print("Births OCR goes through PowerShell: pip install the winrt packages from pyproject.toml to make it faster.")
+    if args.overlay:
+        if importlib.util.find_spec("webview") is None:
+            safe_print(f"Overlay not opened: pywebview is missing. Run: \"{sys.executable}\" -m pip install pywebview")
+        else:
+            subprocess.Popen([sys.executable, "-m", "dofus_ocr.overlay", "--url", f"{url}overlay/forgemagie"])
+            safe_print("Smithmagic overlay opened.")
     safe_print("Press Ctrl+C to stop.")
 
     try:
