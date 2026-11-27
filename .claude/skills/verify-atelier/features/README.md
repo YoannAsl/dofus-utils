@@ -32,3 +32,5 @@ Each feature file starts with an H1 title and one paragraph describing the user-
 - [Élevage › Carburants](./elevage-carburants.md): fuel cost comparison by category, with HDV prices.
 - [Brisage › Calculateur](./brisage-calculator.md): runes and kamas from shattering one item, and coefficient memory.
 - [Brisage › Suivi des brisages](./brisage-log.md): logging broken items and their runes, then editing and deleting entries.
+- [Élevage › Potions de sexe](./elevage-potions.md): the potion badge on a pairing, from the partners waiting in the stable.
+- [Brisage › Coût de craft par défaut](./brisage-craft-cost.md): the craft cost used as the item price when none is known.
