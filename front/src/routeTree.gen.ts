@@ -16,6 +16,7 @@ import { Route as ItemsFmRouteImport } from './routes/items-fm'
 import { Route as PrixRouteImport } from './routes/prix'
 import { Route as RunesRouteImport } from './routes/runes'
 import { Route as VentesRouteImport } from './routes/ventes'
+import { Route as OverlayForgemagieRouteImport } from './routes/overlay.forgemagie'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -52,6 +53,11 @@ const VentesRoute = VentesRouteImport.update({
   path: '/ventes',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OverlayForgemagieRoute = OverlayForgemagieRouteImport.update({
+  id: '/overlay/forgemagie',
+  path: '/overlay/forgemagie',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -61,6 +67,7 @@ export interface FileRoutesByFullPath {
   '/prix': typeof PrixRoute
   '/runes': typeof RunesRoute
   '/ventes': typeof VentesRoute
+  '/overlay/forgemagie': typeof OverlayForgemagieRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -70,6 +77,7 @@ export interface FileRoutesByTo {
   '/prix': typeof PrixRoute
   '/runes': typeof RunesRoute
   '/ventes': typeof VentesRoute
+  '/overlay/forgemagie': typeof OverlayForgemagieRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -80,14 +88,29 @@ export interface FileRoutesById {
   '/prix': typeof PrixRoute
   '/runes': typeof RunesRoute
   '/ventes': typeof VentesRoute
+  '/overlay/forgemagie': typeof OverlayForgemagieRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/brisage' | '/elevage' | '/items-fm' | '/prix' | '/runes' | '/ventes'
+    | '/'
+    | '/brisage'
+    | '/elevage'
+    | '/items-fm'
+    | '/prix'
+    | '/runes'
+    | '/ventes'
+    | '/overlay/forgemagie'
   fileRoutesByTo: FileRoutesByTo
   to:
-    '/' | '/brisage' | '/elevage' | '/items-fm' | '/prix' | '/runes' | '/ventes'
+    | '/'
+    | '/brisage'
+    | '/elevage'
+    | '/items-fm'
+    | '/prix'
+    | '/runes'
+    | '/ventes'
+    | '/overlay/forgemagie'
   id:
     | '__root__'
     | '/'
@@ -97,6 +120,7 @@ export interface FileRouteTypes {
     | '/prix'
     | '/runes'
     | '/ventes'
+    | '/overlay/forgemagie'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -107,6 +131,7 @@ export interface RootRouteChildren {
   PrixRoute: typeof PrixRoute
   RunesRoute: typeof RunesRoute
   VentesRoute: typeof VentesRoute
+  OverlayForgemagieRoute: typeof OverlayForgemagieRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -160,6 +185,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof VentesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/overlay/forgemagie': {
+      id: '/overlay/forgemagie'
+      path: '/overlay/forgemagie'
+      fullPath: '/overlay/forgemagie'
+      preLoaderRoute: typeof OverlayForgemagieRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -171,6 +203,7 @@ const rootRouteChildren: RootRouteChildren = {
   PrixRoute: PrixRoute,
   RunesRoute: RunesRoute,
   VentesRoute: VentesRoute,
+  OverlayForgemagieRoute: OverlayForgemagieRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

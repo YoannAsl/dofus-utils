@@ -1,5 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query";
-import { createRootRouteWithContext, Link, Outlet } from "@tanstack/react-router";
+import { createRootRouteWithContext, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { firstImageFile, OcrPanel } from "@/components/ocr-panel";
 import { PriceTools } from "@/components/price-tools";
@@ -22,6 +22,11 @@ const TOOLS = [
 ] as const;
 
 function RootLayout() {
+  const overlay = useRouterState({ select: (state) => state.location.pathname.startsWith("/overlay/") });
+  return overlay ? <Outlet /> : <AppLayout />;
+}
+
+function AppLayout() {
   useEffect(() => {
     const onPaste = (event: ClipboardEvent) => {
       const items = Array.from(event.clipboardData?.items ?? []);
